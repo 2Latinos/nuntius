@@ -4,7 +4,7 @@
 -export([start/0, stop/0]).
 
 %% @doc Starts the application.
-%% @equiv application:ensure_all_started(nuntius).
+%% @equiv application:ensure_all_started(nuntius)
 %% @todo Decide if we actually need to export this function or we can just use it within new/2.
 -spec start() -> {ok, [module()]}.
 start() ->

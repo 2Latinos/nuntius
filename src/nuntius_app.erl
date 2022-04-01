@@ -6,10 +6,11 @@
 -export([start/2, stop/1]).
 
 %% @private
-%% @todo Implement nuntius_sup and start it from here.
+-spec start(application:start_type(), term()) -> {ok, pid()} | {error, term()}.
 start(_StartType, _StartArgs) ->
-    {ok, self()}.
+    nuntius_sup:start_link().
 
 %% @private
-stop(_State) ->
+-spec stop(_) -> ok.
+stop(_) ->
     ok.
