@@ -4,7 +4,7 @@
   {vsn, semver},
   {registered, []},
   {maintainers, ["2Latinos"]},
-  {links, [{"Github", "https://github.com/2latinos/nuntius"}]},
+  {links, [{"GitHub", "https://github.com/2latinos/nuntius"}]},
   {mod, {nuntius_app, []}},
   {build_tools, ["rebar3"]},
   {applications, [kernel, stdlib]},
