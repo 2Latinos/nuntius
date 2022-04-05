@@ -1,3 +1,3 @@
 # nuntius
 
-In the beginning there was the BEAM.
+A library to mock registered processes.
