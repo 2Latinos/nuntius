@@ -1,1 +1,1 @@
-echo "See the [Releases](releases) page." > CHANGELOG.md
+echo "See the [Releases](../../releases) page." > CHANGELOG.md
