@@ -30,7 +30,7 @@ An ordered list of steps to replicate the bug:
 
 #### Expected behaviour
 
-A clear and concise description of what you expected to happen.
+What's expected to happen when you follow the steps listed above.
 
 #### Additional context
 
