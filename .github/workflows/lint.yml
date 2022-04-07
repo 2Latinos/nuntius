@@ -1,0 +1,31 @@
+---
+name: Lint
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # uses .markdownlint-cli2.yaml for configuration
+      - name: markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v5
+        with:
+          globs: |
+            .github/ISSUE_TEMPLATE/bug_report.md
+            .github/ISSUE_TEMPLATE/feature_request.md
+            CHANGELOG.md
+            CONTRIBUTING.md
+            LICENSE
+            README.md
+
+      - name: yamllint
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+        run: |
+          pip install yamllint
+          yamllint -c yamllint.config .github/workflows/erlang.yml

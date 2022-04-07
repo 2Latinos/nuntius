@@ -2,14 +2,9 @@
  nuntius,
  [{description, "A library to mock registered processes"},
   {vsn, semver},
-  {registered, []},
   {maintainers, ["2Latinos"]},
   {links, [{"GitHub", "https://github.com/2latinos/nuntius"}]},
   {mod, {nuntius_app, []}},
   {build_tools, ["rebar3"]},
   {applications, [kernel, stdlib]},
-  {env, []},
-  {modules, []},
-  {maintainers, []},
-  {licenses, ["MIT"]},
-  {links, []}]}.
+  {licenses, ["MIT"]}]}.
