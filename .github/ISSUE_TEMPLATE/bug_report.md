@@ -23,10 +23,9 @@ A list of software versions where the bug is apparent, as detailed as possible:
 
 An ordered list of steps to replicate the bug:
 
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+1. run `rebar3 ct`
+2. search for `...` in the error output
+3. look at file `...`
 
 #### Expected behaviour
 
