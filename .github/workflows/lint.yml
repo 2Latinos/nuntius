@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
+
       # uses .markdownlint-cli2.yaml for configuration
       - name: markdownlint
         uses: DavidAnson/markdownlint-cli2-action@v5
@@ -23,9 +25,8 @@ jobs:
             README.md
 
       - name: yamllint
-        uses: actions/setup-python@v2
+        uses: ibiqlik/action-yamllint@v3
         with:
-          python-version: 3.8
-        run: |
-          pip install yamllint
-          yamllint -c yamllint.config .github/workflows/erlang.yml
+          file_or_dir: .github/workflows/erlang.yml
+          strict: true
+          config_file: .yamllint.yml
