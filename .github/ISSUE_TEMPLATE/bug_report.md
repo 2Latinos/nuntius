@@ -7,11 +7,11 @@ assignees: ''
 
 ---
 
-**The bug**
+#### The bug
 
 A clear and concise description of what the bug is.
 
-**Software versions**
+#### Software versions
 
 A list of software versions where the bug is apparent, as detailed as possible:
 
@@ -19,7 +19,7 @@ A list of software versions where the bug is apparent, as detailed as possible:
 * `nuntius`: ...
 * other (where applicable): ...
 
-**How to replicate**
+#### How to replicate
 
 An ordered list of steps to replicate the bug:
 
@@ -28,10 +28,10 @@ An ordered list of steps to replicate the bug:
 3. Scroll down to '....'
 4. See error
 
-**Expected behaviour**
+#### Expected behaviour
 
 A clear and concise description of what you expected to happen.
 
-**Additional context**
+#### Additional context
 
 Any other context about the bug.
