@@ -11,13 +11,13 @@ messages sent to specific processes and to allow the consumer to act upon them.
 `nuntius` is best used via [rebar3](https://rebar3.org/)'s `test` profile and using Erlang/OTP's
 [Common Test framework](https://www.erlang.org/doc/man/common_test.html):
 
-1. change your `rebar.config` to include:
+1\. change your `rebar.config` to include:
 
 ```erlang
 {profiles, [{test, [{deps, [nuntius]}]}]}.
 ```
 
-1. run your `nuntius`-enabled tests with:
+2\. run your `nuntius`-enabled tests with:
 
 ```shell
 rebar3 ct
@@ -26,7 +26,7 @@ rebar3 ct
 ## Features
 
 * places mock processes in front of previously registered processes; these mock processes will
-intercept (and handle) every message that was supposed to go to the latter ones, then
+intercept (and optionally handle) every message that was supposed to go to the latter ones, then
   * allows mock processes to decide on letting the messages pass through, or not,
   * allows mock processes to run one or many pre-processing functions on each received message,
   * allows mock processes to discard intercepted messages entirely,
@@ -39,6 +39,10 @@ Documentation is generated with:
 ```shell
 rebar3 edoc
 ```
+
+after which you can use your favorite Web browser to open `doc/index.html`.
+
+It is also available, online, at [hexdocs.pm/nuntius](https://hexdocs.pm/nuntius/).
 
 ## Examples
 
@@ -55,14 +59,12 @@ We get inspiration for our README's format/content from
 
 ## Changelog
 
-All notable changes to this project will be referenced from [this file](CHANGELOG.md).
+All notable changes to this project will be referenced from the [CHANGELOG](CHANGELOG.md).
 
 ## Contributing
 
-Though this project is maintained by [2Latinos][https://github.com/2Latinos] contributions are
+Though this project is maintained by [2Latinos](https://github.com/2Latinos) contributions are
 accepted and welcome. Check [CONTRIBUTING.md](CONTRIBUTING.md) for more.
-
-It is also available online at [hexdocs.pm/nuntius](https://hexdocs.pm/nuntius/).
 
 ## License
 
