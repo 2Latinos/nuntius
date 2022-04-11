@@ -4,6 +4,15 @@
 -export([start/0, stop/0]).
 -export([new/1, new/2]).
 
+-type process_name() :: atom().
+-type opts() ::
+    #{must_exist => boolean(),
+      passthrough => boolean(),
+      link => boolean(),
+      history => boolean()}.
+
+-export_type([process_name/0, opts/0]).
+
 %% @doc Starts the application.
 %% @equiv application:ensure_all_started(nuntius)
 %% @todo Decide if we actually need to export this function or we can just use it within new/2.
@@ -19,7 +28,7 @@ stop() ->
 %% @doc Injects a new mock process in front of the process with the provided name.
 %%     Returns an error if there is no process registered under that name.
 %% @equiv new(ProcessName, #{})
--spec new(atom()) -> ok | {error, not_found}.
+-spec new(process_name()) -> ok | {error, not_found}.
 new(ProcessName) ->
     new(ProcessName,
         #{must_exist => true,
@@ -41,16 +50,6 @@ new(ProcessName) ->
 %%          - <b>history:</b> If true, the mocking process will keep the history of messages
 %%              received.
 %%              <b>Default:</b> <pre>true</pre>
--spec new(atom(), Opts) -> ok | {error, not_found}
-    when Opts ::
-             #{must_exist => boolean(),
-               passthrough => boolean(),
-               link => boolean(),
-               history => boolean()}.
+-spec new(process_name(), opts()) -> ok | {error, not_found}.
 new(ProcessName, Opts) ->
-    case {ProcessName, Opts, rand:uniform(10)} of
-        {ProcessName, Opts, X} when X < 11 ->
-            ok;
-        _ ->
-            {error, not_found}
-    end.
+    nuntius_sup:start_mock(ProcessName, Opts).

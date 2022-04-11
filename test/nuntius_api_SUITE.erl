@@ -5,7 +5,7 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
--export([passthrough_mock_has_no_effect/1]).
+-export([default_mock/1, error_not_found/1]).
 
 all() ->
     [F
@@ -29,14 +29,26 @@ end_per_testcase(_TestCase, Config) ->
     exit(PlusOner, kill),
     Config.
 
-passthrough_mock_has_no_effect(_Config) ->
+%% @doc The default mock is practically invisible.
+default_mock(_Config) ->
     % Original state
     2 = add_one(1),
     % We mock the process but we don't handle any message
     ok = nuntius:new(plus_oner),
     % So, nothing changes
     2 = add_one(1),
-    {comment, ""}.
+    ok.
+
+%% @doc If the process to mock doesn't exist, an error is raised.
+%%      Unless the <pre>must_exist</pre> flag is specified.
+error_not_found(_Config) ->
+    % By default, you can't mock nonexisting processes
+    {error, not_found} = nuntius:new(non_existing_process),
+    % But you can, if you use <pre>must_exist => false</pre>
+    ok = nuntius:new(non_exisiting_process, #{must_exist => false}),
+    % Of course, you can mock existing processes using that flag, too
+    ok = nuntius:new(plus_oner, #{must_exist => false}),
+    ok.
 
 plus_oner() ->
     receive
