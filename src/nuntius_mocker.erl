@@ -27,7 +27,8 @@ init(ProcessName, ProcessPid, Opts) ->
            process_pid => ProcessPid,
            opts => Opts}).
 
-%% @todo Do stuff with the received messages instead of ignoring them
+%% @todo Do stuff with the received messages instead of ignoring them.
+%% @todo Collect message history if <pre>history := true</pre>.
 loop(State) ->
     receive
         Message ->
