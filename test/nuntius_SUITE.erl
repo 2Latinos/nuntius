@@ -1,3 +1,4 @@
+%%% @doc Tests for the application, in general
 -module(nuntius_SUITE).
 
 -behaviour(ct_suite).
