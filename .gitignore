@@ -3,3 +3,4 @@ _build
 erl_crash.dump
 rebar3.crashdump
 doc/
+.rebar3
