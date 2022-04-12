@@ -5,11 +5,7 @@
 -export([new/1, new/2]).
 
 -type process_name() :: atom().
--type opts() ::
-    #{must_exist => boolean(),
-      passthrough => boolean(),
-      link => boolean(),
-      history => boolean()}.
+-type opts() :: #{passthrough => boolean(), history => boolean()}.
 
 -export_type([process_name/0, opts/0]).
 
@@ -34,23 +30,14 @@ new(ProcessName) ->
 
 %% @doc Injects a new mock process in front of the process with the provided name.
 %%      Options:
-%%          - <b>must_exist:</b> If true and the process doesn't exist, an error is returned.
-%%              <b>Default:</b> <pre>true</pre>
-%%              <b>Implies:</b> <pre>link => false</pre>
 %%          - <b>passthrough:</b> If true, all messages are passed through
 %%              to the process by default.
 %%              If false, messages that are not handled by any expectation are just dropped.
-%%              <b>Default:</b> <pre>true</pre>
-%%          - <b>link:</b> If true, the mocking process is linked to the mocked one.
 %%              <b>Default:</b> <pre>true</pre>
 %%          - <b>history:</b> If true, the mocking process will keep the history of messages
 %%              received.
 %%              <b>Default:</b> <pre>true</pre>
 -spec new(process_name(), opts()) -> ok | {error, not_found}.
 new(ProcessName, Opts) ->
-    DefaultOpts =
-        #{must_exist => true,
-          passthrough => true,
-          link => true,
-          history => true},
+    DefaultOpts = #{passthrough => true, history => true},
     nuntius_sup:start_mock(ProcessName, maps:merge(DefaultOpts, Opts)).

@@ -5,32 +5,36 @@
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
-%%      If the process to be mocked doesn't exist, returns <pre>ignore</pre>,
-%%      unless <pre>must_exist</pre> is <pre>false</pre>.
+%%      If the process to be mocked doesn't exist, returns <pre>ignore</pre>.
 -spec start_link(nuntius:process_name(), nuntius:opts()) -> {ok, pid()} | ignore.
 start_link(ProcessName, Opts) ->
-    case {whereis(ProcessName), Opts} of
-        {undefined, #{must_exist := true}} ->
+    case whereis(ProcessName) of
+        undefined ->
             ignore;
-        {ProcessPid, Opts} ->
+        ProcessPid ->
             proc_lib:start_link(nuntius_mocker, init, [ProcessName, ProcessPid, Opts])
     end.
 
 %% @private
--spec init(nuntius:process_name(), pid() | undefined, nuntius:opts()) -> no_return().
+-spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
-    maybe_link(ProcessPid, Opts),
-    maybe_unregister(ProcessName, ProcessPid),
+    ProcessMonitor = erlang:monitor(process, ProcessPid),
+    erlang:unregister(ProcessName),
     erlang:register(ProcessName, self()),
     proc_lib:init_ack({ok, self()}),
     loop(#{process_name => ProcessName,
            process_pid => ProcessPid,
+           process_monitor => ProcessMonitor,
            opts => Opts}).
 
 %% @todo Do stuff with the received messages instead of ignoring them.
 %% @todo Collect message history if <pre>history := true</pre>.
+%% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
+    #{process_monitor := ProcessMonitor, process_pid := ProcessPid} = State,
     receive
+        {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
+            exit(Reason);
         Message ->
             case State of
                 #{opts := #{passthrough := false}} ->
@@ -45,15 +49,3 @@ loop(State) ->
             end,
             loop(State)
     end.
-
-maybe_unregister(_ProcessName, undefined) ->
-    false;
-maybe_unregister(ProcessName, _) ->
-    erlang:unregister(ProcessName).
-
-maybe_link(undefined, _) ->
-    false;
-maybe_link(_, #{link := false}) ->
-    false;
-maybe_link(ProcessPid, _) ->
-    erlang:link(ProcessPid).

@@ -2,7 +2,5 @@
 nuntius_sup
 new/2
 -
-<b>must_exist:</b>
 <b>passthrough:</b>
-<b>link:</b>
 <b>history:</b>

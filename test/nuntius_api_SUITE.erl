@@ -40,14 +40,9 @@ default_mock(_Config) ->
     ok.
 
 %% @doc If the process to mock doesn't exist, an error is raised.
-%%      Unless the <pre>must_exist</pre> flag is specified.
 error_not_found(_Config) ->
     % By default, you can't mock nonexisting processes
     {error, not_found} = nuntius:new(non_existing_process),
-    % But you can, if you use <pre>must_exist => false</pre>
-    ok = nuntius:new(non_exisiting_process, #{must_exist => false}),
-    % Of course, you can mock existing processes using that flag, too
-    ok = nuntius:new(plus_oner, #{must_exist => false}),
     ok.
 
 plus_oner() ->
