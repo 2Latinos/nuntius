@@ -46,9 +46,7 @@ new(ProcessName, Opts) ->
 %% @doc Returns the list of mocked processes.
 -spec mocked() -> [process_name()].
 mocked() ->
-    [ProcessName
-     || {_, Pid, worker, _} <- supervisor:which_children(nuntius_sup),
-        {registered_name, ProcessName} <- erlang:process_info(Pid, [registered_name])].
+    nuntius_sup:mocked().
 
 %% @doc Returns the PID of a mocked process (the original one with that name).
 -spec mocked_process(process_name()) -> pid() | {error, not_mocked}.

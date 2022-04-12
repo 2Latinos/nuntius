@@ -4,6 +4,7 @@
 -behaviour(supervisor).
 
 -export([start_link/0]).
+-export([mocked/0]).
 -export([init/1]).
 -export([start_mock/2]).
 
@@ -11,6 +12,13 @@
 -spec start_link() -> {ok, pid()} | {error, term()}.
 start_link() ->
     supervisor:start_link({local, nuntius_sup}, nuntius_sup, []).
+
+%% @doc Returns the list of mocked processes.
+-spec mocked() -> [nuntius:process_name()].
+mocked() ->
+    [ProcessName
+     || {_, Pid, worker, _} <- supervisor:which_children(nuntius_sup),
+        {registered_name, ProcessName} <- erlang:process_info(Pid, [registered_name])].
 
 %% @private
 init([]) ->
