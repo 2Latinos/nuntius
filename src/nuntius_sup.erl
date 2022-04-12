@@ -16,7 +16,9 @@ start_link() ->
 init([]) ->
     {ok,
      {#{strategy => simple_one_for_one},
-      [#{id => nuntius_mocker, start => {nuntius_mocker, start_link, []}}]}}.
+      [#{id => nuntius_mocker,
+         restart => temporary,
+         start => {nuntius_mocker, start_link, []}}]}}.
 
 %% @doc Starts a new mock process.
 %% @see nuntius:new/2
