@@ -6,7 +6,7 @@
 -export([start_link/0]).
 -export([mocked/0]).
 -export([init/1]).
--export([start_mock/2]).
+-export([start_mock/2, stop_mock/1]).
 
 %% @private
 -spec start_link() -> {ok, pid()} | {error, term()}.
@@ -37,4 +37,17 @@ start_mock(ProcessName, Opts) ->
             {error, not_found};
         {ok, _} ->
             ok
+    end.
+
+%% @doc Terminates a mocking process.
+%%      Reregisters the mocked process with its name.
+-spec stop_mock(nuntius:process_name()) -> ok | {error, not_mocked}.
+stop_mock(ProcessName) ->
+    case lists:member(ProcessName, mocked()) of
+        false ->
+            {error, not_mocked};
+        true ->
+            MockerPid = whereis(ProcessName),
+            ok = nuntius_mocker:delete(ProcessName),
+            supervisor:terminate_child(nuntius_sup, MockerPid)
     end.

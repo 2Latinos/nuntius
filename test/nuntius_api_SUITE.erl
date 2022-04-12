@@ -5,7 +5,7 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
--export([default_mock/1, error_not_found/1, mocked_processes/1]).
+-export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1]).
 
 all() ->
     [F
@@ -51,6 +51,23 @@ error_not_found(_Config) ->
     {error, not_found} = nuntius:new(non_existing_process),
     ok.
 
+%% @doc Processes can be unmocked.
+delete_mock(Config) ->
+    {plus_oner_pid, PlusOner} = lists:keyfind(plus_oner_pid, 1, Config),
+    % Trying to remove a non-existent mock, fails
+    {error, not_mocked} = nuntius:delete(plus_oner),
+    {error, not_mocked} = nuntius:delete(doesnt_even_exist),
+    PlusOner = whereis(plus_oner),
+    % Mocking it and later deleting the mock
+    % restores the registered name to the mocked process
+    ok = nuntius:new(plus_oner),
+    false = PlusOner == whereis(plus_oner),
+    ok = nuntius:delete(plus_oner),
+    PlusOner = whereis(plus_oner),
+    % And the process is, again, not mocked
+    {error, not_mocked} = nuntius:delete(plus_oner),
+    ok.
+
 %% @doc Users can get the pid of a mocked process and the list of all mocked processes
 mocked_processes(Config) ->
     % Initially, no mocked processes
@@ -69,6 +86,9 @@ mocked_processes(Config) ->
     [echo, plus_oner] =
         lists:sort(
             nuntius:mocked()),
+    % If you remove a mock, it goes away from the list
+    ok = nuntius:delete(plus_oner),
+    [echo] = nuntius:mocked(),
     ok.
 
 add_one(ANumber) ->

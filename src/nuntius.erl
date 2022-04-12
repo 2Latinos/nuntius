@@ -2,7 +2,7 @@
 -module(nuntius).
 
 -export([start/0, stop/0]).
--export([new/1, new/2]).
+-export([new/1, new/2, delete/1]).
 -export([mocked/0, mocked_process/1]).
 
 -type process_name() :: atom().
@@ -42,6 +42,11 @@ new(ProcessName) ->
 new(ProcessName, Opts) ->
     DefaultOpts = #{passthrough => true, history => true},
     nuntius_sup:start_mock(ProcessName, maps:merge(DefaultOpts, Opts)).
+
+%% @doc Removes a mocking process.
+-spec delete(process_name()) -> ok | {error, not_mocked}.
+delete(ProcessName) ->
+    nuntius_sup:stop_mock(ProcessName).
 
 %% @doc Returns the list of mocked processes.
 -spec mocked() -> [process_name()].
