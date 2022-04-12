@@ -30,11 +30,7 @@ stop() ->
 %% @equiv new(ProcessName, #{})
 -spec new(process_name()) -> ok | {error, not_found}.
 new(ProcessName) ->
-    new(ProcessName,
-        #{must_exist => true,
-          passthrough => true,
-          link => true,
-          history => true}).
+    new(ProcessName, #{}).
 
 %% @doc Injects a new mock process in front of the process with the provided name.
 %%      Options:
@@ -52,4 +48,9 @@ new(ProcessName) ->
 %%              <b>Default:</b> <pre>true</pre>
 -spec new(process_name(), opts()) -> ok | {error, not_found}.
 new(ProcessName, Opts) ->
-    nuntius_sup:start_mock(ProcessName, Opts).
+    DefaultOpts =
+        #{must_exist => true,
+          passthrough => true,
+          link => true,
+          history => true},
+    nuntius_sup:start_mock(ProcessName, maps:merge(DefaultOpts, Opts)).
