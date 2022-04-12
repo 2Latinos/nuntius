@@ -2,6 +2,7 @@
 -module(nuntius_mocker).
 
 -export([start_link/2]).
+-export([mocked_process/1]).
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
@@ -15,12 +16,21 @@ start_link(ProcessName, Opts) ->
             proc_lib:start_link(nuntius_mocker, init, [ProcessName, ProcessPid, Opts])
     end.
 
+%% @doc Returns the PID of a mocked process (the original one with that name).
+-spec mocked_process(nuntius:process_name()) -> pid().
+mocked_process(ProcessName) ->
+    {dictionary, Dict} = erlang:process_info(whereis(ProcessName), dictionary),
+    {'$nuntius_mocker_mocked_process', ProcessPid} =
+        lists:keyfind('$nuntius_mocker_mocked_process', 1, Dict),
+    ProcessPid.
+
 %% @private
 -spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
     ProcessMonitor = erlang:monitor(process, ProcessPid),
     erlang:unregister(ProcessName),
     erlang:register(ProcessName, self()),
+    erlang:put('$nuntius_mocker_mocked_process', ProcessPid),
     proc_lib:init_ack({ok, self()}),
     loop(#{process_name => ProcessName,
            process_pid => ProcessPid,

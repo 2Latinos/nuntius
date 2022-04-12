@@ -3,6 +3,7 @@
 
 -export([start/0, stop/0]).
 -export([new/1, new/2]).
+-export([mocked/0, mocked_process/1]).
 
 -type process_name() :: atom().
 -type opts() :: #{passthrough => boolean(), history => boolean()}.
@@ -41,3 +42,20 @@ new(ProcessName) ->
 new(ProcessName, Opts) ->
     DefaultOpts = #{passthrough => true, history => true},
     nuntius_sup:start_mock(ProcessName, maps:merge(DefaultOpts, Opts)).
+
+%% @doc Returns the list of mocked processes.
+-spec mocked() -> [process_name()].
+mocked() ->
+    [ProcessName
+     || {_, Pid, worker, _} <- supervisor:which_children(nuntius_sup),
+        {registered_name, ProcessName} <- erlang:process_info(Pid, [registered_name])].
+
+%% @doc Returns the PID of a mocked process (the original one with that name).
+-spec mocked_process(process_name()) -> pid() | {error, not_mocked}.
+mocked_process(ProcessName) ->
+    case lists:member(ProcessName, mocked()) of
+        false ->
+            {error, not_mocked};
+        true ->
+            nuntius_mocker:mocked_process(ProcessName)
+    end.

@@ -5,7 +5,7 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
--export([default_mock/1, error_not_found/1]).
+-export([default_mock/1, error_not_found/1, mocked_processes/1]).
 
 all() ->
     [F
@@ -22,12 +22,18 @@ end_per_suite(Config) ->
 init_per_testcase(_TestCase, Config) ->
     PlusOner = spawn(fun plus_oner/0),
     true = register(plus_oner, PlusOner),
-    [{plus_oner_pid, PlusOner} | Config].
+    Echo = spawn(fun echo/0),
+    true = register(echo, Echo),
+    [{echo_pid, Echo}, {plus_oner_pid, PlusOner} | Config].
 
 end_per_testcase(_TestCase, Config) ->
-    {plus_oner_pid, PlusOner} = lists:keyfind(plus_oner_pid, 1, Config),
+    {value, {plus_oner_pid, PlusOner}, ConfigWithoutPlusOner} =
+        lists:keytake(plus_oner_pid, 1, Config),
     exit(PlusOner, kill),
-    Config.
+    {value, {echo_pid, Echo}, CleanConfig} =
+        lists:keytake(echo_pid, 1, ConfigWithoutPlusOner),
+    exit(Echo, kill),
+    CleanConfig.
 
 %% @doc The default mock is practically invisible.
 default_mock(_Config) ->
@@ -45,6 +51,41 @@ error_not_found(_Config) ->
     {error, not_found} = nuntius:new(non_existing_process),
     ok.
 
+%% @doc Users can get the pid of a mocked process and the list of all mocked processes
+mocked_processes(Config) ->
+    % Initially, no mocked processes
+    [] = nuntius:mocked(),
+    % If process is not mocked, you can't find the original process
+    {error, not_mocked} = nuntius:mocked_process(plus_oner),
+    % Once you mock it, you can get the original PID
+    {plus_oner_pid, PlusOner} = lists:keyfind(plus_oner_pid, 1, Config),
+    ok = nuntius:new(plus_oner),
+    false = PlusOner == whereis(plus_oner),
+    PlusOner = nuntius:mocked_process(plus_oner),
+    % And the process appears in the list of mocked processes
+    [plus_oner] = nuntius:mocked(),
+    % If you mock two processes, they both appear in the list
+    ok = nuntius:new(echo),
+    [echo, plus_oner] =
+        lists:sort(
+            nuntius:mocked()),
+    ok.
+
+add_one(ANumber) ->
+    call(plus_oner, ANumber).
+
+call(Process, Message) ->
+    Ref = make_ref(),
+    Process ! {self(), Ref, Message},
+    receive
+        {Ref, Result} ->
+            Result
+    after 1000 ->
+        error(#{reason => timeout,
+                process => Process,
+                message => Message})
+    end.
+
 plus_oner() ->
     receive
         {Caller, Ref, ANumber} ->
@@ -52,12 +93,9 @@ plus_oner() ->
     end,
     plus_oner().
 
-add_one(ANumber) ->
-    Ref = make_ref(),
-    plus_oner ! {self(), Ref, ANumber},
+echo() ->
     receive
-        {Ref, Result} ->
-            Result
-    after 1000 ->
-        error(#{reason => timeout, parameter => ANumber})
-    end.
+        {Caller, Ref, Message} ->
+            Caller ! {Ref, Message}
+    end,
+    echo().
