@@ -2,7 +2,7 @@
 -module(nuntius_mocker).
 
 -export([start_link/2]).
--export([mocked_process/1, delete/1]).
+-export([mocked_process/1, history/1, reset_history/1, delete/1]).
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
@@ -29,6 +29,20 @@ mocked_process(ProcessName) ->
         lists:keyfind('$nuntius_mocker_mocked_process', 1, Dict),
     ProcessPid.
 
+%% @doc Returns the history of messages received by a mocked process.
+-spec history(nuntius:process_name()) -> [nuntius:event()].
+history(ProcessName) ->
+    {ok, History} = gen:call(ProcessName, '$nuntius_call', history),
+    History.
+
+%% @doc Erases the history for a mocked process.
+%%      Note that there is no gen:cast(...),
+%%      gen_server and others basically just send the message and move on, like us.
+-spec reset_history(nuntius:process_name()) -> ok.
+reset_history(ProcessName) ->
+    ProcessName ! {'$nuntius_cast', reset_history},
+    ok.
+
 %% @private
 -spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
@@ -39,32 +53,49 @@ init(ProcessName, ProcessPid, Opts) ->
     loop(#{process_name => ProcessName,
            process_pid => ProcessPid,
            process_monitor => ProcessMonitor,
+           history => [],
            opts => Opts}).
 
 %% @todo Do stuff with the received messages instead of ignoring them.
-%% @todo Collect message history if <pre>history := true</pre>.
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
-    #{process_monitor := ProcessMonitor, process_pid := ProcessPid} = State,
-    receive
-        {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
-            exit(Reason);
-        Message ->
-            case State of
-                #{opts := #{passthrough := false}} ->
-                    %% We don't pass messages through, we just ignore all of them.
-                    ignore;
-                #{process_pid := undefined} ->
-                    %% We don't know where that process lives, so we ignore the message.
-                    ignore;
-                #{process_pid := ProcessPid} ->
-                    %% We pass the message through.
-                    ProcessPid ! Message
-            end,
-            loop(State)
-    end.
+    #{process_monitor := ProcessMonitor,
+      process_pid := ProcessPid,
+      history := History} =
+        State,
+    NextState =
+        receive
+            {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
+                exit(Reason);
+            {'$nuntius_call', From, history} ->
+                _ = gen:reply(From, lists:reverse(History)),
+                State;
+            {'$nuntius_cast', reset_history} ->
+                State#{history := []};
+            Message ->
+                handle_message(Message, State)
+        end,
+    loop(NextState).
 
 reregister(ProcessName, ProcessPid) ->
     erlang:unregister(ProcessName),
     erlang:register(ProcessName, ProcessPid),
     ok.
+
+handle_message(Message, State) ->
+    _ = maybe_passthrough(Message, State),
+    maybe_add_event(Message, State).
+
+maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
+    ignore;
+maybe_passthrough(Message, #{process_pid := ProcessPid}) ->
+    ProcessPid ! Message.
+
+maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
+    State;
+maybe_add_event(Message, State) ->
+    maps:update_with(history,
+                     fun(History) ->
+                        [#{timestamp => erlang:system_time(), message => Message} | History]
+                     end,
+                     State).
