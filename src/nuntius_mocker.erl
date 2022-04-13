@@ -68,7 +68,7 @@ loop(State) ->
             {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
                 exit(Reason);
             {'$nuntius_call', From, history} ->
-                _ = gen:reply(From, History),
+                _ = gen:reply(From, lists:reverse(History)),
                 State;
             {'$nuntius_cast', reset_history} ->
                 State#{history := []};
@@ -82,21 +82,18 @@ reregister(ProcessName, ProcessPid) ->
     erlang:register(ProcessName, ProcessPid),
     ok.
 
-handle_message(_Message, #{opts := #{passthrough := false, history := false}} = State) ->
-    State;
-handle_message(Message, #{opts := #{passthrough := false, history := true}} = State) ->
-    add_event(Message, State);
-handle_message(Message, #{opts := #{passthrough := true, history := false}} = State) ->
-    passthrough(Message, State),
-    State;
-handle_message(Message, #{opts := #{passthrough := true, history := true}} = State) ->
-    passthrough(Message, State),
-    add_event(Message, State).
+handle_message(Message, State) ->
+    _ = maybe_passthrough(Message, State),
+    maybe_add_event(Message, State).
 
-passthrough(Message, #{process_pid := ProcessPid}) ->
+maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
+    ignore;
+maybe_passthrough(Message, #{process_pid := ProcessPid}) ->
     ProcessPid ! Message.
 
-add_event(Message, State) ->
+maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
+    State;
+maybe_add_event(Message, State) ->
     maps:update_with(history,
                      fun(History) ->
                         [#{timestamp => erlang:system_time(), message => Message} | History]
