@@ -5,7 +5,8 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
--export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1]).
+-export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
+         no_history/1]).
 
 all() ->
     [F
@@ -89,6 +90,50 @@ mocked_processes(Config) ->
     % If you remove a mock, it goes away from the list
     ok = nuntius:delete(plus_oner),
     [echo] = nuntius:mocked(),
+    ok.
+
+history(_Config) ->
+    % If a process is not mocked, nuntius returns an error
+    {error, not_mocked} = nuntius:history(plus_oner),
+    % We mock it
+    ok = nuntius:new(plus_oner),
+    % Originally the history is empty
+    [] = nuntius:history(plus_oner),
+    % We send a message to it
+    2 = add_one(1),
+    % The message appears in the history
+    [#{timestamp := T1, message := {_, _, 1}}] = nuntius:history(plus_oner),
+    % We send another message
+    3 = add_one(2),
+    % The message appears in the history
+    [#{timestamp := T1, message := {_, _, 1}}, #{timestamp := T2, message := {_, _, 2}}] =
+        lists:sort(
+            nuntius:history(plus_oner)),
+    true = T1 < T2,
+    % If we reset the history, it's now empty again
+    ok = nuntius:reset_history(plus_oner),
+    [] = nuntius:history(plus_oner),
+    % We send yet another message
+    4 = add_one(3),
+    [#{timestamp := T3, message := {_, _, 3}}] = nuntius:history(plus_oner),
+    true = T2 < T3,
+    ok.
+
+no_history(_Config) ->
+    ok = nuntius:new(plus_oner, #{history => false}),
+    % Originally the history is empty
+    [] = nuntius:history(plus_oner),
+    % We send a message to it
+    2 = add_one(1),
+    % The history is still empty
+    [] = nuntius:history(plus_oner),
+    % Resetting the history has no effect
+    ok = nuntius:reset_history(plus_oner),
+    [] = nuntius:history(plus_oner),
+    % We send another message to it
+    3 = add_one(2),
+    % The history is still empty
+    [] = nuntius:history(plus_oner),
     ok.
 
 add_one(ANumber) ->

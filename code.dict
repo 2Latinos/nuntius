@@ -1,5 +1,6 @@
 %% Code pieces that appear in comments
 nuntius_sup
+gen_server
 new/2
 -
 <b>passthrough:</b>
