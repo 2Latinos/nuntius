@@ -68,7 +68,7 @@ loop(State) ->
             {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
                 exit(Reason);
             {'$nuntius_call', From, history} ->
-                gen:reply(From, History),
+                _ = gen:reply(From, History),
                 State;
             {'$nuntius_cast', reset_history} ->
                 State#{history := []};
