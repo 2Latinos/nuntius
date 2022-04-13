@@ -4,7 +4,7 @@
 -export([start/0, stop/0]).
 -export([new/1, new/2, delete/1]).
 -export([mocked/0, mocked_process/1]).
--export([history/1, reset_history/1]).
+-export([history/1, received/2, reset_history/1]).
 
 -type process_name() :: atom().
 -type event() :: #{timestamp := integer(), message := term()}.
@@ -64,6 +64,13 @@ mocked_process(ProcessName) ->
 -spec history(process_name()) -> [event()] | {error, not_mocked}.
 history(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:history/1).
+
+%% @doc Returns whether a particular message was received already.
+%%
+%% <em>Note: it only works with <pre>history => true.</pre></em>
+-spec received(process_name(), term()) -> boolean() | {error, not_mocked}.
+received(ProcessName, Message) ->
+    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:received(PN, Message) end).
 
 %% @doc Erases the history for a mocked process.
 -spec reset_history(process_name()) -> ok | {error, not_mocked}.
