@@ -2,7 +2,7 @@
 -module(nuntius_mocker).
 
 -export([start_link/2]).
--export([mocked_process/1, history/1, reset_history/1, delete/1]).
+-export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
@@ -35,6 +35,14 @@ history(ProcessName) ->
     {ok, History} = gen:call(ProcessName, '$nuntius_call', history),
     History.
 
+%% @doc Returns whether a particular message was received already.
+%%
+%% <em>Note: it only works with <pre>history => true.</pre></em>
+-spec received(nuntius:process_name(), term()) -> boolean().
+received(ProcessName, Message) ->
+    {ok, Result} = gen:call(ProcessName, '$nuntius_call', {received, Message}),
+    Result.
+
 %% @doc Erases the history for a mocked process.
 %%      Note that there is no gen:cast(...),
 %%      gen_server and others basically just send the message and move on, like us.
@@ -59,16 +67,13 @@ init(ProcessName, ProcessPid, Opts) ->
 %% @todo Do stuff with the received messages instead of ignoring them.
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
-    #{process_monitor := ProcessMonitor,
-      process_pid := ProcessPid,
-      history := History} =
-        State,
+    #{process_monitor := ProcessMonitor, process_pid := ProcessPid} = State,
     NextState =
         receive
             {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
                 exit(Reason);
-            {'$nuntius_call', From, history} ->
-                _ = gen:reply(From, lists:reverse(History)),
+            {'$nuntius_call', From, Call} ->
+                _ = gen:reply(From, handle_call(Call, State)),
                 State;
             {'$nuntius_cast', reset_history} ->
                 State#{history := []};
@@ -81,6 +86,11 @@ reregister(ProcessName, ProcessPid) ->
     erlang:unregister(ProcessName),
     erlang:register(ProcessName, ProcessPid),
     ok.
+
+handle_call(history, #{history := History}) ->
+    lists:reverse(History);
+handle_call({received, Message}, #{history := History}) ->
+    lists:any(fun(#{message := M}) -> M =:= Message end, History).
 
 handle_message(Message, State) ->
     _ = maybe_passthrough(Message, State),

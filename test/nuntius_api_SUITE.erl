@@ -95,45 +95,61 @@ mocked_processes(Config) ->
 history(_Config) ->
     % If a process is not mocked, nuntius returns an error
     {error, not_mocked} = nuntius:history(plus_oner),
+    {error, not_mocked} = nuntius:received(plus_oner, any_message),
     % We mock it
     ok = nuntius:new(plus_oner),
     % Originally the history is empty
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, 1),
     % We send a message to it
     2 = add_one(1),
     % The message appears in the history
-    [#{timestamp := T1, message := {_, _, 1}}] = nuntius:history(plus_oner),
+    [#{timestamp := T1, message := {_, _, 1} = M1}] = nuntius:history(plus_oner),
+    true = nuntius:received(plus_oner, M1),
+    false = nuntius:received(plus_oner, 2),
     % We send another message
     3 = add_one(2),
     % The message appears in the history
-    [#{timestamp := T1, message := {_, _, 1}}, #{timestamp := T2, message := {_, _, 2}}] =
+    [#{timestamp := T1, message := M1}, #{timestamp := T2, message := M2}] =
         lists:sort(
             nuntius:history(plus_oner)),
     true = T1 < T2,
+    true = nuntius:received(plus_oner, M1),
+    true = nuntius:received(plus_oner, M2),
     % If we reset the history, it's now empty again
     ok = nuntius:reset_history(plus_oner),
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, M1),
+    false = nuntius:received(plus_oner, M2),
     % We send yet another message
     4 = add_one(3),
-    [#{timestamp := T3, message := {_, _, 3}}] = nuntius:history(plus_oner),
+    [#{timestamp := T3, message := M3}] = nuntius:history(plus_oner),
     true = T2 < T3,
+    false = nuntius:received(plus_oner, M1),
+    false = nuntius:received(plus_oner, M2),
+    true = nuntius:received(plus_oner, M3),
     ok.
 
 no_history(_Config) ->
     ok = nuntius:new(plus_oner, #{history => false}),
     % Originally the history is empty
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, 1),
     % We send a message to it
     2 = add_one(1),
     % The history is still empty
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, 1),
     % Resetting the history has no effect
     ok = nuntius:reset_history(plus_oner),
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, 1),
     % We send another message to it
     3 = add_one(2),
     % The history is still empty
     [] = nuntius:history(plus_oner),
+    false = nuntius:received(plus_oner, 1),
+    false = nuntius:received(plus_oner, 2),
     ok.
 
 add_one(ANumber) ->
