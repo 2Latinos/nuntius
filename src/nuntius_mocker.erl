@@ -136,7 +136,7 @@ handle_cast(reset_history, State) ->
 handle_cast({expect, Function, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => Expects#{ExpectId => Function}};
 handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
-    State#{expects => maps:without([ExpectId], Expects)}.
+    State#{expects => maps:remove(ExpectId, Expects)}.
 
 %% @todo Do stuff with the received messages instead of ignoring them.
 handle_message(Message, State) ->
