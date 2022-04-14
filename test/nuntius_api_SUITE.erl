@@ -16,7 +16,7 @@ all() ->
         not lists:member(F, [init_per_suite, end_per_suite, module_info])].
 
 init_per_suite(Config) ->
-    nuntius:start(),
+    _ = nuntius:start(),
     Config.
 
 end_per_suite(Config) ->
