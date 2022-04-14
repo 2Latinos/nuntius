@@ -113,8 +113,8 @@ delete(ProcessName, ExpectId) ->
     if_mocked(ProcessName, fun(PN) -> nuntius_mocker:delete(PN, ExpectId) end).
 
 %% @doc Returns the list of expect functions for a process.
--spec expects(process_name()) ->
-                 {ok, #{expect_id() => expect_fun()}} | {error, not_mocked}.
+-spec expects(process_name()) -> {ok, Expectations} | {error, not_mocked}
+    when Expectations :: #{expect_id() => expect_fun()}.
 expects(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:expects/1).
 
