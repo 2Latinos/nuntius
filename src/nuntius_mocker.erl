@@ -61,17 +61,10 @@ reset_history(ProcessName) ->
 %%      When the expect function is successfully added or replaced:
 %%        - if named, it'll keep the name as its identifier,
 %%        - otherwise, a reference is returned as an identifier
--spec expect(nuntius:process_name(), nuntius:expect_name(), nuntius:expect_fun()) -> ok;
-            (nuntius:process_name(), reference(), nuntius:expect_fun()) ->
-                {ok, nuntius:expect_id()}.
+-spec expect(nuntius:process_name(), nuntius:expect_id(), nuntius:expect_fun()) -> ok.
 expect(ProcessName, ExpectId, Function) ->
     ProcessName ! {'$nuntius_cast', {expect, Function, ExpectId}},
-    case is_reference(ExpectId) of
-        true -> % unnamed
-            {ok, ExpectId};
-        false -> % named
-            ok
-    end.
+    ok.
 
 %% @doc Removes an expect function.
 %%      If the expect function was not already there, this function still returns 'ok'.

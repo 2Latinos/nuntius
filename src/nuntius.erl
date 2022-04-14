@@ -87,9 +87,9 @@ reset_history(ProcessName) ->
 %%      If the message doesn't match any clause, nothing will be done.
 %%      If the process is not mocked, an error is returned.
 %%      When the function is successfully added, a reference is returned as an identifier.
--spec expect(process_name(), expect_fun()) -> {ok, expect_id()} | {error, not_mocked}.
+-spec expect(process_name(), expect_fun()) -> {ok, reference()} | {error, not_mocked}.
 expect(ProcessName, Function) ->
-    expect_internal(ProcessName, erlang:make_ref(), Function).
+    do_expect(ProcessName, erlang:make_ref(), Function).
 
 %% @doc Adds a new <em>named</em> expect function to a mocked process.
 %%      When a message is received by the process, this function will be run on it.
@@ -98,12 +98,17 @@ expect(ProcessName, Function) ->
 %%      If there was already an expect function with that name, it's replaced.
 %%      When the expect function is successfully added or replaced, it'll keep the name
 %%        as its identifier.
--spec expect(process_name(), expect_name(), expect_fun()) -> ok | {error, not_mocked}.
+-spec expect(process_name(), expect_name(), expect_fun()) ->
+                {ok, expect_name()} | {error, not_mocked}.
 expect(ProcessName, ExpectName, Function) ->
-    expect_internal(ProcessName, ExpectName, Function).
+    do_expect(ProcessName, ExpectName, Function).
 
-expect_internal(ProcessName, ExpectId, Function) ->
-    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, ExpectId, Function) end).
+do_expect(ProcessName, ExpectId, Function) ->
+    if_mocked(ProcessName,
+              fun(PN) ->
+                 nuntius_mocker:expect(PN, ExpectId, Function),
+                 {ok, ExpectId}
+              end).
 
 %% @doc Removes an expect function.
 %%      If the expect function was not already there, this function still returns 'ok'.
