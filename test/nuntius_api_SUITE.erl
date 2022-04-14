@@ -6,7 +6,7 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
-         no_history/1, expect/1, expect_message/1]).
+         no_history/1, expect/1, expect_message/1, mocked_process/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -219,6 +219,20 @@ expect_message(_Config) ->
         after 250 ->
             ok
         end.
+
+mocked_process(_Config) ->
+    Pid = whereis(echo),
+    Self = self(),
+    ok = nuntius:new(echo),
+    _ = nuntius:expect(echo, fun (boom) -> Pid = nuntius:mocked_process(), Self ! from_mocked end),
+    % We send the mocked process a message
+    echo ! boom,
+    ok = receive
+        from_mocked ->
+            ok % ... and if we got here we have echo's Pid inside the expectation
+    after 250 ->
+        error(timeout)
+    end.
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).

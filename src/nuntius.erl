@@ -4,6 +4,7 @@
 -export([start/0, stop/0]).
 -export([new/1, new/2, delete/1]).
 -export([mocked/0, mocked_process/1]).
+-export([mocked_process/0]).
 -export([history/1, received/2, reset_history/1]).
 -export([expect/2, expect/3, delete/2, expects/1]).
 
@@ -64,6 +65,13 @@ mocked() ->
 -spec mocked_process(process_name()) -> pid() | {error, not_mocked}.
 mocked_process(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:mocked_process/1).
+
+%% @doc Returns the PID of the currently mocked process.
+%%
+%% <em>Note: this code should only be used inside an expect fun.</em>
+-spec mocked_process() -> pid().
+mocked_process() ->
+    nuntius_mocker:mocked_process().
 
 %% @doc Returns the history of messages received by a mocked process.
 -spec history(process_name()) -> [event()] | {error, not_mocked}.

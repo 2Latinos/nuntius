@@ -3,6 +3,7 @@
 
 -export([start_link/2]).
 -export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
+-export([mocked_process/0]).
 -export([expect/3, delete/2, expects/1]).
 -export([init/3]).
 
@@ -29,6 +30,13 @@ mocked_process(ProcessName) ->
     {'$nuntius_mocker_mocked_process', ProcessPid} =
         lists:keyfind('$nuntius_mocker_mocked_process', 1, Dict),
     ProcessPid.
+
+%% @doc Returns the PID of the currently mocked process.
+%%
+%% <em>Note: this code should only be used inside an expect fun.</em>
+-spec mocked_process() -> pid().
+mocked_process() ->
+    process_pid().
 
 %% @doc Returns the history of messages received by a mocked process.
 -spec history(nuntius:process_name()) -> [nuntius:event()].
@@ -88,8 +96,8 @@ init(ProcessName, ProcessPid, Opts) ->
     reregister(ProcessName, self()),
     erlang:put('$nuntius_mocker_mocked_process', ProcessPid),
     proc_lib:init_ack({ok, self()}),
+    process_pid(ProcessPid),
     loop(#{process_name => ProcessName,
-           process_pid => ProcessPid,
            process_monitor => ProcessMonitor,
            history => [],
            opts => Opts,
@@ -97,7 +105,8 @@ init(ProcessName, ProcessPid, Opts) ->
 
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
-    #{process_monitor := ProcessMonitor, process_pid := ProcessPid} = State,
+    ProcessPid = process_pid(),
+    #{process_monitor := ProcessMonitor} = State,
     NextState =
         receive
             {'DOWN', ProcessMonitor, process, ProcessPid, Reason} ->
@@ -153,7 +162,8 @@ run_expects(Message, Expects) ->
 
 maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
     ignore;
-maybe_passthrough(Message, #{process_pid := ProcessPid}) ->
+maybe_passthrough(Message, _State) ->
+    ProcessPid = process_pid(),
     ProcessPid ! Message.
 
 maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
@@ -164,3 +174,9 @@ maybe_add_event(Message, State) ->
                         [#{timestamp => erlang:system_time(), message => Message} | History]
                      end,
                      State).
+
+process_pid(ProcessPid) ->
+    put(process_pid, ProcessPid).
+
+process_pid() ->
+    get(process_pid).
