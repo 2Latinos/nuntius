@@ -6,7 +6,7 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
-         no_history/1, expect/1]).
+         no_history/1, expect/1, expect_message/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -196,6 +196,29 @@ expect(_Config) ->
     % named_exp2 is still there (with it's function)
     1 = maps:size(Expects()),
     #{named_exp2 := _} = Expects().
+
+expect_message(_Config) ->
+    ok = nuntius:new(echo, #{passthrough => false}),
+    Self = self(),
+    % Have the expectation send a message back to us
+    _ = nuntius:expect(echo, boom_echo, fun(boomerang = M) -> Self ! {echoed, M} end),
+    _ = nuntius:expect(echo, kyli_echo, fun(kylie = M) -> Self ! {echoed, M} end),
+    echo ! boomerang,
+    receive
+        {echoed, boomerang} ->
+            ok
+    after 250 ->
+        error(timeout)
+    end,
+    % Check if a nonmatching expectation would also work
+    echo ! unknown,
+    ok =
+        receive
+            _ ->
+                ignored
+        after 250 ->
+            ok
+        end.
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).

@@ -131,10 +131,25 @@ handle_cast({expect, Function, ExpectId}, #{expects := Expects} = State) ->
 handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:remove(ExpectId, Expects)}.
 
-%% @todo Do stuff with the received messages instead of ignoring them.
-handle_message(Message, State) ->
+handle_message(Message, #{expects := Expects} = State) ->
+    run_expects(Message, Expects),
     _ = maybe_passthrough(Message, State),
     maybe_add_event(Message, State).
+
+run_expects(Message, Expects) ->
+    maps:fold(fun (_Id, _Expect, true = _Done) ->
+                      ok;
+                  (_Id, Expect, false) ->
+                      try
+                          Expect(Message),
+                          true
+                      catch
+                          error:function_clause ->
+                              false
+                      end
+              end,
+              false,
+              Expects).
 
 maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
     ignore;
