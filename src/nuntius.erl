@@ -5,12 +5,17 @@
 -export([new/1, new/2, delete/1]).
 -export([mocked/0, mocked_process/1]).
 -export([history/1, received/2, reset_history/1]).
+-export([expect/2, expect/3, delete/2, expects/1]).
 
 -type process_name() :: atom().
 -type event() :: #{timestamp := integer(), message := term()}.
 -type opts() :: #{passthrough => boolean(), history => boolean()}.
+-type expect_fun() :: fun((_) -> _).
+-type expect_name() :: atom().
+-type expect_id() :: reference() | expect_name().
 
 -export_type([process_name/0, opts/0, event/0]).
+-export_type([expect_fun/0, expect_name/0, expect_id/0]).
 
 %% @doc Starts the application.
 %% @equiv application:ensure_all_started(nuntius)
@@ -76,6 +81,39 @@ received(ProcessName, Message) ->
 -spec reset_history(process_name()) -> ok | {error, not_mocked}.
 reset_history(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:reset_history/1).
+
+%% @doc Adds a new expect function to a mocked process.
+%%      When a message is received by the process, this function will be run on it.
+%%      If the message doesn't match any clause, nothing will be done.
+%%      If the process is not mocked, an error is returned.
+%%      When the function is successfully added, a reference is returned as an identifier.
+-spec expect(process_name(), expect_fun()) -> {ok, expect_id()} | {error, not_mocked}.
+expect(ProcessName, Function) ->
+    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, Function) end).
+
+%% @doc Adds a new <em>named</em> expect function to a mocked process.
+%%      When a message is received by the process, this function will be run on it.
+%%      If the message doesn't match any clause, nothing will be done.
+%%      If the process is not mocked, an error is returned.
+%%      If there was already an expect function with that name, it's replaced.
+%%      When the expect function is successfully added or replaced, it'll keep the name
+%%        as its identifier.
+-spec expect(process_name(), expect_name(), expect_fun()) -> ok | {error, not_mocked}.
+expect(ProcessName, ExpectName, Function) ->
+    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, ExpectName, Function) end).
+
+%% @doc Removes an expect function.
+%%      If the expect function was not already there, this function still returns 'ok'.
+%%      If the process is not mocked, an error is returned.
+-spec delete(process_name(), expect_id()) -> ok | {error, not_mocked}.
+delete(ProcessName, ExpectId) ->
+    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:delete(PN, ExpectId) end).
+
+%% @doc Returns the list of expect functions for a process.
+-spec expects(process_name()) ->
+                 {ok, #{expect_id() => expect_fun()}} | {error, not_mocked}.
+expects(ProcessName) ->
+    if_mocked(ProcessName, fun nuntius_mocker:expects/1).
 
 if_mocked(ProcessName, Function) ->
     case lists:member(ProcessName, mocked()) of

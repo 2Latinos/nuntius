@@ -3,6 +3,7 @@
 
 -export([start_link/2]).
 -export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
+-export([expect/2, expect/3, delete/2, expects/1]).
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
@@ -51,6 +52,44 @@ reset_history(ProcessName) ->
     ProcessName ! {'$nuntius_cast', reset_history},
     ok.
 
+%% @doc Adds a new expect function to a mocked process.
+%%      When a message is received by the process, this function will be run on it.
+%%      If the message doesn't match any clause, nothing will be done.
+%%      If the process is not mocked, an error is returned.
+%%      When the function is successfully added, a reference is returned as an identifier.
+-spec expect(nuntius:process_name(), nuntius:expect_fun()) -> {ok, nuntius:expect_id()}.
+expect(ProcessName, Function) ->
+    Ref = erlang:make_ref(),
+    ProcessName ! {'$nuntius_cast', {expect, Function, Ref}},
+    {ok, Ref}.
+
+%% @doc Adds a new <em>named</em> expect function to a mocked process.
+%%      When a message is received by the process, this function will be run on it.
+%%      If the message doesn't match any clause, nothing will be done.
+%%      If the process is not mocked, an error is returned.
+%%      If there was already an expect function with that name, it's replaced.
+%%      When the expect function is successfully added or replaced,
+%%        it'll keep the name as its identifier.
+-spec expect(nuntius:process_name(), nuntius:expect_name(), nuntius:expect_fun()) -> ok.
+expect(ProcessName, ExpectName, Function) ->
+    ProcessName ! {'$nuntius_cast', {expect, Function, ExpectName}},
+    ok.
+
+%% @doc Removes an expect function.
+%%      If the expect function was not already there, this function still returns 'ok'.
+%%      If the process is not mocked, an error is returned.
+-spec delete(nuntius:process_name(), nuntius:expect_id()) -> ok.
+delete(ProcessName, ExpectId) ->
+    ProcessName ! {'$nuntius_cast', {delete, ExpectId}},
+    ok.
+
+%% @doc Returns the list of expect functions for a process.
+-spec expects(nuntius:process_name()) ->
+                 {ok, #{nuntius:expect_id() => nuntius:expect_fun()}}.
+expects(ProcessName) ->
+    {ok, Result} = gen:call(ProcessName, '$nuntius_call', expects),
+    Result.
+
 %% @private
 -spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
@@ -62,9 +101,9 @@ init(ProcessName, ProcessPid, Opts) ->
            process_pid => ProcessPid,
            process_monitor => ProcessMonitor,
            history => [],
-           opts => Opts}).
+           opts => Opts,
+           expects => #{}}).
 
-%% @todo Do stuff with the received messages instead of ignoring them.
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
     #{process_monitor := ProcessMonitor, process_pid := ProcessPid} = State,
@@ -75,8 +114,8 @@ loop(State) ->
             {'$nuntius_call', From, Call} ->
                 _ = gen:reply(From, handle_call(Call, State)),
                 State;
-            {'$nuntius_cast', reset_history} ->
-                State#{history := []};
+            {'$nuntius_cast', Cast} ->
+                handle_cast(Cast, State);
             Message ->
                 handle_message(Message, State)
         end,
@@ -90,8 +129,18 @@ reregister(ProcessName, ProcessPid) ->
 handle_call(history, #{history := History}) ->
     lists:reverse(History);
 handle_call({received, Message}, #{history := History}) ->
-    lists:any(fun(#{message := M}) -> M =:= Message end, History).
+    lists:any(fun(#{message := M}) -> M =:= Message end, History);
+handle_call(expects, #{expects := Expects}) ->
+    Expects.
 
+handle_cast(reset_history, State) ->
+    State#{history := []};
+handle_cast({expect, Function, RefOrExpectName}, #{expects := Expects} = State) ->
+    State#{expects => Expects#{RefOrExpectName => Function}};
+handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
+    State#{expects => maps:without([ExpectId], Expects)}.
+
+%% @todo Do stuff with the received messages instead of ignoring them.
 handle_message(Message, State) ->
     _ = maybe_passthrough(Message, State),
     maybe_add_event(Message, State).
