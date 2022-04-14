@@ -89,7 +89,7 @@ reset_history(ProcessName) ->
 %%      When the function is successfully added, a reference is returned as an identifier.
 -spec expect(process_name(), expect_fun()) -> {ok, expect_id()} | {error, not_mocked}.
 expect(ProcessName, Function) ->
-    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, Function) end).
+    expect_internal(ProcessName, erlang:make_ref(), Function).
 
 %% @doc Adds a new <em>named</em> expect function to a mocked process.
 %%      When a message is received by the process, this function will be run on it.
@@ -100,7 +100,10 @@ expect(ProcessName, Function) ->
 %%        as its identifier.
 -spec expect(process_name(), expect_name(), expect_fun()) -> ok | {error, not_mocked}.
 expect(ProcessName, ExpectName, Function) ->
-    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, ExpectName, Function) end).
+    expect_internal(ProcessName, ExpectName, Function).
+
+expect_internal(ProcessName, ExpectId, Function) ->
+    if_mocked(ProcessName, fun(PN) -> nuntius_mocker:expect(PN, ExpectId, Function) end).
 
 %% @doc Removes an expect function.
 %%      If the expect function was not already there, this function still returns 'ok'.

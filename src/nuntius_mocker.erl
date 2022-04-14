@@ -3,7 +3,7 @@
 
 -export([start_link/2]).
 -export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
--export([expect/2, expect/3, delete/2, expects/1]).
+-export([expect/3, delete/2, expects/1]).
 -export([init/3]).
 
 %% @doc Boots up a mocking process.
@@ -56,24 +56,22 @@ reset_history(ProcessName) ->
 %%      When a message is received by the process, this function will be run on it.
 %%      If the message doesn't match any clause, nothing will be done.
 %%      If the process is not mocked, an error is returned.
-%%      When the function is successfully added, a reference is returned as an identifier.
--spec expect(nuntius:process_name(), nuntius:expect_fun()) -> {ok, nuntius:expect_id()}.
-expect(ProcessName, Function) ->
-    Ref = erlang:make_ref(),
-    ProcessName ! {'$nuntius_cast', {expect, Function, Ref}},
-    {ok, Ref}.
-
-%% @doc Adds a new <em>named</em> expect function to a mocked process.
-%%      When a message is received by the process, this function will be run on it.
-%%      If the message doesn't match any clause, nothing will be done.
-%%      If the process is not mocked, an error is returned.
-%%      If there was already an expect function with that name, it's replaced.
-%%      When the expect function is successfully added or replaced,
-%%        it'll keep the name as its identifier.
--spec expect(nuntius:process_name(), nuntius:expect_name(), nuntius:expect_fun()) -> ok.
-expect(ProcessName, ExpectName, Function) ->
-    ProcessName ! {'$nuntius_cast', {expect, Function, ExpectName}},
-    ok.
+%%      If the expect is named, and there was already an expect function with that name,
+%%        it's replaced.
+%%      When the expect function is successfully added or replaced:
+%%        - if named, it'll keep the name as its identifier,
+%%        - otherwise, a reference is returned as an identifier
+-spec expect(nuntius:process_name(), nuntius:expect_name(), nuntius:expect_fun()) -> ok;
+            (nuntius:process_name(), reference(), nuntius:expect_fun()) ->
+                {ok, nuntius:expect_id()}.
+expect(ProcessName, ExpectId, Function) ->
+    ProcessName ! {'$nuntius_cast', {expect, Function, ExpectId}},
+    case is_reference(ExpectId) of
+        true -> % unnamed
+            {ok, ExpectId};
+        false -> % named
+            ok
+    end.
 
 %% @doc Removes an expect function.
 %%      If the expect function was not already there, this function still returns 'ok'.
