@@ -135,8 +135,8 @@ handle_call(expects, #{expects := Expects}) ->
 
 handle_cast(reset_history, State) ->
     State#{history := []};
-handle_cast({expect, Function, RefOrExpectName}, #{expects := Expects} = State) ->
-    State#{expects => Expects#{RefOrExpectName => Function}};
+handle_cast({expect, Function, ExpectId}, #{expects := Expects} = State) ->
+    State#{expects => Expects#{ExpectId => Function}};
 handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:without([ExpectId], Expects)}.
 
