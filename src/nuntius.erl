@@ -87,7 +87,7 @@ reset_history(ProcessName) ->
 %%      If the message doesn't match any clause, nothing will be done.
 %%      If the process is not mocked, an error is returned.
 %%      When the function is successfully added, a reference is returned as an identifier.
--spec expect(process_name(), expect_fun()) -> {ok, reference()} | {error, not_mocked}.
+-spec expect(process_name(), expect_fun()) -> reference() | {error, not_mocked}.
 expect(ProcessName, Function) ->
     do_expect(ProcessName, erlang:make_ref(), Function).
 
@@ -99,7 +99,7 @@ expect(ProcessName, Function) ->
 %%      When the expect function is successfully added or replaced, it'll keep the name
 %%        as its identifier.
 -spec expect(process_name(), expect_name(), expect_fun()) ->
-                {ok, expect_name()} | {error, not_mocked}.
+                expect_name() | {error, not_mocked}.
 expect(ProcessName, ExpectName, Function) ->
     do_expect(ProcessName, ExpectName, Function).
 
@@ -107,7 +107,7 @@ do_expect(ProcessName, ExpectId, Function) ->
     if_mocked(ProcessName,
               fun(PN) ->
                  nuntius_mocker:expect(PN, ExpectId, Function),
-                 {ok, ExpectId}
+                 ExpectId
               end).
 
 %% @doc Removes an expect function.
@@ -118,7 +118,7 @@ delete(ProcessName, ExpectId) ->
     if_mocked(ProcessName, fun(PN) -> nuntius_mocker:delete(PN, ExpectId) end).
 
 %% @doc Returns the list of expect functions for a process.
--spec expects(process_name()) -> {ok, Expectations} | {error, not_mocked}
+-spec expects(process_name()) -> Expectations | {error, not_mocked}
     when Expectations :: #{expect_id() => expect_fun()}.
 expects(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:expects/1).

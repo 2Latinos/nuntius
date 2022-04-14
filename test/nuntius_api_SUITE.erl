@@ -161,22 +161,24 @@ expect(_Config) ->
     Expects = fun() -> nuntius:expects(plus_oner) end,
     ok = nuntius:new(plus_oner),
     % Add (unnamed) expectations...
-    {ok, Ref1} = nuntius:expect(plus_oner, fun(_) -> ok end),
-    {ok, Ref2} = nuntius:expect(plus_oner, fun(_) -> ok end),
+    Ref1 = nuntius:expect(plus_oner, fun(_) -> ok end),
+    true = is_reference(Ref1),
+    Ref2 = nuntius:expect(plus_oner, fun(_) -> ok end),
+    true = is_reference(Ref2),
     % ... and (only known) references in expectations
     2 = maps:size(Expects()),
     [Ref2] = maps:keys(Expects()) -- [Ref1],
     % Now add (named) expectations...
-    {ok, named_exp1} = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
+    named_exp1 = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
     % ... and check they're there
     3 = maps:size(Expects()),
     [named_exp1] = maps:keys(Expects()) -- [Ref1, Ref2],
     % ... and that using the same name overwrites existing expectations
-    {ok, named_exp1} = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
+    named_exp1 = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
     [named_exp1] = maps:keys(Expects()) -- [Ref1, Ref2],
     % ... though different names don't
     FunNamedExp2 = fun(_) -> ok end,
-    {ok, named_exp2} = nuntius:expect(plus_oner, named_exp2, FunNamedExp2),
+    named_exp2 = nuntius:expect(plus_oner, named_exp2, FunNamedExp2),
     4 = maps:size(Expects()),
     [named_exp2] = maps:keys(Expects()) -- [Ref1, Ref2, named_exp1],
     % Let's now delete an expectation...
@@ -184,7 +186,7 @@ expect(_Config) ->
     ok = nuntius:delete(plus_oner, Ref1),
     error = maps:find(Ref1, Expects()), % ... and it's not anymore
     % ... and another one
-    % {ok, _} = maps:find(Ref2, Expects()), % It was here...
+    {ok, _} = maps:find(Ref2, Expects()), % It was here...
     ok = nuntius:delete(plus_oner, Ref2),
     error = maps:find(Ref2, Expects()), % ... and it's not anymore
     % ... and another one
