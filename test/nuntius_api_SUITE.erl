@@ -184,11 +184,16 @@ expect(_Config) ->
     ok = nuntius:delete(plus_oner, Ref1),
     error = maps:find(Ref1, Expects()), % ... and it's not anymore
     % ... and another one
+    % {ok, _} = maps:find(Ref2, Expects()), % It was here...
+    ok = nuntius:delete(plus_oner, Ref2),
+    error = maps:find(Ref2, Expects()), % ... and it's not anymore
+    % ... and another one
     {ok, _} = maps:find(named_exp1, Expects()), % It was here...
     ok = nuntius:delete(plus_oner, named_exp1),
     error = maps:find(named_exp1, Expects()), % ... and it's not anymore
     % named_exp2 is still there (with it's function)
-    #{named_exp2 := FunNamedExp2} = Expects().
+    1 = maps:size(Expects()),
+    #{named_exp2 := _} = Expects().
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).
