@@ -132,13 +132,13 @@ handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:remove(ExpectId, Expects)}.
 
 handle_message(Message, #{expects := Expects} = State) ->
-    run_expects(Message, Expects),
-    _ = maybe_passthrough(Message, State),
+    ExpectsRan = run_expects(Message, Expects),
+    ExpectsRan orelse maybe_passthrough(Message, State),
     maybe_add_event(Message, State).
 
 run_expects(Message, Expects) ->
     maps:fold(fun (_Id, _Expect, true = _Done) ->
-                      ok;
+                      true;
                   (_Id, Expect, false) ->
                       try
                           Expect(Message),
