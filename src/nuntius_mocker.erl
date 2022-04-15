@@ -3,7 +3,7 @@
 
 -export([start_link/2]).
 -export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
--export([mocked_process/0]).
+-export([passthrough/0, mocked_process/0]).
 -export([expect/3, delete/2, expects/1]).
 -export([init/3]).
 
@@ -30,6 +30,15 @@ mocked_process(ProcessName) ->
     {'$nuntius_mocker_mocked_process', ProcessPid} =
         lists:keyfind('$nuntius_mocker_mocked_process', 1, Dict),
     ProcessPid.
+
+%% @doc Passes the current message down to the mocked process.
+%%
+%% <em>Note: this code should only be used inside an expect fun.</em>
+-spec passthrough() -> ok.
+passthrough() ->
+    ProcessPid = process_pid(),
+    CurrentMessage = current_message(),
+    ProcessPid ! CurrentMessage.
 
 %% @doc Returns the PID of the currently mocked process.
 %%
@@ -141,6 +150,7 @@ handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:remove(ExpectId, Expects)}.
 
 handle_message(Message, #{expects := Expects} = State) ->
+    current_message(Message),
     ExpectsRan = run_expects(Message, Expects),
     ExpectsRan orelse maybe_passthrough(Message, State),
     maybe_add_event(Message, State).
@@ -180,3 +190,9 @@ process_pid(ProcessPid) ->
 
 process_pid() ->
     get(process_pid).
+
+current_message(Message) ->
+    put(current_message, Message).
+
+current_message() ->
+    get(current_message).

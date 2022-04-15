@@ -6,7 +6,7 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
-         no_history/1, expect/1, expect_message/1, mocked_process/1]).
+         no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -230,6 +230,24 @@ mocked_process(_Config) ->
     ok = receive
         from_mocked ->
             ok % ... and if we got here we have echo's Pid inside the expectation
+    after 250 ->
+        error(timeout)
+    end.
+
+passthrough(_Config) ->
+    ok = nuntius:new(echo),
+    % We pass a message to the mocked_process
+    _ = nuntius:expect(echo, fun ({_, _, _}) -> nuntius:passthrough() end),
+    echo ! {self(), get, back},
+    ok = receive
+        {get, back} ->
+            ok % ... and since it's an echo process, we get it back
+    after 250 ->
+        error(timeout)
+    end,
+    ok = receive
+        {get, back} ->
+            ok % ... and then from the passthrough
     after 250 ->
         error(timeout)
     end.
