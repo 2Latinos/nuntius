@@ -250,9 +250,9 @@ passthrough(_Config) ->
     call(echo, back), % ... and since it's an echo process, we get it back
     receive
         {_, back} ->
-            ok % ... and then from the pass through
+            error(received) % ... but not from the pass through
     after 250 ->
-        error(timeout)
+        ok
     end.
 
 % @doc We pass a specific message (from the expectation) through to the mocked
@@ -271,21 +271,20 @@ passthrough_message(_Config) ->
                               error(timeout)
                           end
                        end),
-    call(echo, message),
+    echo ! message,
     % And now, for a different test...
-    ok = nuntius:new(echo),
     Self = self(),
     _ = nuntius:expect(echo,
                        fun(_) ->
                           % We pass another specific message to the mocked process
                           nuntius:passthrough({Self, make_ref(), new_message})
                        end),
-    call(echo, new_message),
+    echo ! new_message,
     receive
         {_, new_message} ->
-            ok % ... and then we get it back (outside the process)
+            error(received) % ... but we don't get it back (outside the process)
     after 250 ->
-        error(timeout)
+        ok
     end.
 
 add_one(ANumber) ->
