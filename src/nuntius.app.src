@@ -3,7 +3,7 @@
  [{description, "A library to mock registered processes"},
   {vsn, semver},
   {maintainers, ["2Latinos"]},
-  {links, [{"GitHub", "https://github.com/2latinos/nuntius"}]},
+  {links, [{"GitHub", "https://github.com/2Latinos/nuntius"}]},
   {mod, {nuntius_app, []}},
   {build_tools, ["rebar3"]},
   {applications, [kernel, stdlib]},

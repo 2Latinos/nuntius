@@ -3,7 +3,7 @@
 
 -export([start_link/2]).
 -export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
--export([passthrough/0, mocked_process/0]).
+-export([passthrough/0, passthrough/1, mocked_process/0]).
 -export([expect/3, delete/2, expects/1]).
 -export([init/3]).
 
@@ -33,16 +33,22 @@ mocked_process(ProcessName) ->
 
 %% @doc Passes the current message down to the mocked process.
 %%
-%% <em>Note: this code should only be used inside an expect fun.</em>
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
 -spec passthrough() -> ok.
 passthrough() ->
+    passthrough(current_message()).
+
+%% @doc Passes a message down to the mocked process.
+%%
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
+-spec passthrough(term()) -> ok.
+passthrough(Message) ->
     ProcessPid = process_pid(),
-    CurrentMessage = current_message(),
-    ProcessPid ! CurrentMessage.
+    ProcessPid ! Message.
 
 %% @doc Returns the PID of the currently mocked process.
 %%
-%% <em>Note: this code should only be used inside an expect fun.</em>
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
 -spec mocked_process() -> pid().
 mocked_process() ->
     process_pid().
@@ -55,7 +61,7 @@ history(ProcessName) ->
 
 %% @doc Returns whether a particular message was received already.
 %%
-%% <em>Note: it only works with <pre>history => true.</pre></em>
+%% <strong> Note </strong>: it only works with <pre>history => true.</pre>
 -spec received(nuntius:process_name(), term()) -> boolean().
 received(ProcessName, Message) ->
     {ok, Result} = gen:call(ProcessName, '$nuntius_call', {received, Message}),

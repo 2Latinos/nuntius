@@ -6,7 +6,8 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
-         no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1]).
+         no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1,
+         passthrough_message/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -220,34 +221,69 @@ expect_message(_Config) ->
             ok
         end.
 
+% @doc We get the mocked process id from the mock process
+%      We play with message passing for extra guarantees
 mocked_process(_Config) ->
     Pid = whereis(echo),
     Self = self(),
     ok = nuntius:new(echo),
-    _ = nuntius:expect(echo, fun (boom) -> Pid = nuntius:mocked_process(), Self ! from_mocked end),
+    _ = nuntius:expect(echo,
+                       fun(boom) ->
+                          Pid = nuntius:mocked_process(),
+                          Self ! from_mocked
+                       end),
     % We send the mocked process a message
     echo ! boom,
-    ok = receive
+    receive
         from_mocked ->
             ok % ... and if we got here we have echo's Pid inside the expectation
     after 250 ->
         error(timeout)
     end.
 
+% @doc We pass the expectation message through to the mocked process
+%      We play with message passing for extra guarantees
 passthrough(_Config) ->
     ok = nuntius:new(echo),
-    % We pass a message to the mocked_process
-    _ = nuntius:expect(echo, fun ({_, _, _}) -> nuntius:passthrough() end),
-    echo ! {self(), get, back},
-    ok = receive
-        {get, back} ->
-            ok % ... and since it's an echo process, we get it back
+    % We pass a message to the mocked process
+    _ = nuntius:expect(echo, fun(_) -> nuntius:passthrough() end),
+    call(echo, back), % ... and since it's an echo process, we get it back
+    receive
+        {_, back} ->
+            ok % ... and then from the pass through
     after 250 ->
         error(timeout)
-    end,
-    ok = receive
-        {get, back} ->
-            ok % ... and then from the passthrough
+    end.
+
+% @doc We pass a specific message (from the expectation) through to the mocked
+%        process
+%      We play with message passing for extra guarantees
+passthrough_message(_Config) ->
+    ok = nuntius:new(echo),
+    _ = nuntius:expect(echo,
+                       fun(_) ->
+                          % We pass a specific message to the mocked process
+                          nuntius:passthrough({self(), make_ref(), message}),
+                          receive
+                              {_, message} ->
+                                  ok % ... and then we get it back (inside the process)
+                          after 250 ->
+                              error(timeout)
+                          end
+                       end),
+    call(echo, message),
+    % And now, for a different test...
+    ok = nuntius:new(echo),
+    Self = self(),
+    _ = nuntius:expect(echo,
+                       fun(_) ->
+                          % We pass another specific message to the mocked process
+                          nuntius:passthrough({Self, make_ref(), new_message})
+                       end),
+    call(echo, new_message),
+    receive
+        {_, new_message} ->
+            ok % ... and then we get it back (outside the process)
     after 250 ->
         error(timeout)
     end.
