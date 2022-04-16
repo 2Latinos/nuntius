@@ -6,7 +6,9 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2,
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
-         no_history/1]).
+         no_history/1, expect/1, expect_message/1]).
+
+-elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
 all() ->
     [F
@@ -14,7 +16,7 @@ all() ->
         not lists:member(F, [init_per_suite, end_per_suite, module_info])].
 
 init_per_suite(Config) ->
-    nuntius:start(),
+    _ = nuntius:start(),
     Config.
 
 end_per_suite(Config) ->
@@ -151,6 +153,72 @@ no_history(_Config) ->
     false = nuntius:received(plus_oner, 1),
     false = nuntius:received(plus_oner, 2),
     ok.
+
+% @doc Your process can contain several expectations and you can
+%      list them by reference too. We're not testing the handling of
+%      messages, here.
+expect(_Config) ->
+    Expects = fun() -> nuntius:expects(plus_oner) end,
+    ok = nuntius:new(plus_oner),
+    % Add (unnamed) expectations...
+    Ref1 = nuntius:expect(plus_oner, fun(_) -> ok end),
+    true = is_reference(Ref1),
+    Ref2 = nuntius:expect(plus_oner, fun(_) -> ok end),
+    true = is_reference(Ref2),
+    % ... and (only known) references in expectations
+    2 = maps:size(Expects()),
+    [Ref2] = maps:keys(Expects()) -- [Ref1],
+    % Now add (named) expectations...
+    named_exp1 = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
+    % ... and check they're there
+    3 = maps:size(Expects()),
+    [named_exp1] = maps:keys(Expects()) -- [Ref1, Ref2],
+    % ... and that using the same name overwrites existing expectations
+    named_exp1 = nuntius:expect(plus_oner, named_exp1, fun(_) -> ok end),
+    [named_exp1] = maps:keys(Expects()) -- [Ref1, Ref2],
+    % ... though different names don't
+    FunNamedExp2 = fun(_) -> ok end,
+    named_exp2 = nuntius:expect(plus_oner, named_exp2, FunNamedExp2),
+    4 = maps:size(Expects()),
+    [named_exp2] = maps:keys(Expects()) -- [Ref1, Ref2, named_exp1],
+    % Let's now delete an expectation...
+    {ok, _} = maps:find(Ref1, Expects()), % It was here...
+    ok = nuntius:delete(plus_oner, Ref1),
+    error = maps:find(Ref1, Expects()), % ... and it's not anymore
+    % ... and another one
+    {ok, _} = maps:find(Ref2, Expects()), % It was here...
+    ok = nuntius:delete(plus_oner, Ref2),
+    error = maps:find(Ref2, Expects()), % ... and it's not anymore
+    % ... and another one
+    {ok, _} = maps:find(named_exp1, Expects()), % It was here...
+    ok = nuntius:delete(plus_oner, named_exp1),
+    error = maps:find(named_exp1, Expects()), % ... and it's not anymore
+    % named_exp2 is still there (with it's function)
+    1 = maps:size(Expects()),
+    #{named_exp2 := _} = Expects().
+
+expect_message(_Config) ->
+    ok = nuntius:new(echo, #{passthrough => false}),
+    Self = self(),
+    % Have the expectation send a message back to us
+    _ = nuntius:expect(echo, boom_echo, fun(boomerang = M) -> Self ! {echoed, M} end),
+    _ = nuntius:expect(echo, kyli_echo, fun(kylie = M) -> Self ! {echoed, M} end),
+    echo ! boomerang,
+    receive
+        {echoed, boomerang} ->
+            ok
+    after 250 ->
+        error(timeout)
+    end,
+    % Check if a nonmatching expectation would also work
+    echo ! unknown,
+    ok =
+        receive
+            _ ->
+                ignored
+        after 250 ->
+            ok
+        end.
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).
