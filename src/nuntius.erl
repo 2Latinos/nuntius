@@ -4,6 +4,7 @@
 -export([start/0, stop/0]).
 -export([new/1, new/2, delete/1]).
 -export([mocked/0, mocked_process/1]).
+-export([passthrough/0, passthrough/1, mocked_process/0]).
 -export([history/1, received/2, reset_history/1]).
 -export([expect/2, expect/3, delete/2, expects/1]).
 
@@ -65,6 +66,27 @@ mocked() ->
 mocked_process(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:mocked_process/1).
 
+%% @doc Passes the current message down to the mocked process.
+%%
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
+-spec passthrough() -> ok.
+passthrough() ->
+    nuntius_mocker:passthrough().
+
+%% @doc Passes a message down to the mocked process.
+%%
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
+-spec passthrough(term()) -> ok.
+passthrough(Message) ->
+    nuntius_mocker:passthrough(Message).
+
+%% @doc Returns the PID of the currently mocked process.
+%%
+%% <strong> Note </strong>: this code should only be used inside an expect fun.
+-spec mocked_process() -> pid().
+mocked_process() ->
+    nuntius_mocker:mocked_process().
+
 %% @doc Returns the history of messages received by a mocked process.
 -spec history(process_name()) -> [event()] | {error, not_mocked}.
 history(ProcessName) ->
@@ -72,7 +94,7 @@ history(ProcessName) ->
 
 %% @doc Returns whether a particular message was received already.
 %%
-%% <em>Note: it only works with <pre>history => true.</pre></em>
+%% <strong> Note </strong>: it only works with <pre>history => true.</pre>
 -spec received(process_name(), term()) -> boolean() | {error, not_mocked}.
 received(ProcessName, Message) ->
     if_mocked(ProcessName, fun(PN) -> nuntius_mocker:received(PN, Message) end).
