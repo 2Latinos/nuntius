@@ -1,4 +1,4 @@
-%%% @doc Tests for the top-level API.
+%% @doc Tests for the top-level API.
 -module(nuntius_api_SUITE).
 
 -behaviour(ct_suite).

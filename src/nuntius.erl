@@ -1,4 +1,4 @@
-%%% @doc The main interface for the system.
+%% @doc The main interface for the system.
 -module(nuntius).
 
 -export([start/0, stop/0]).
@@ -30,22 +30,28 @@ start() ->
 stop() ->
     application:stop(nuntius).
 
-%% @doc Injects a new mock process in front of the process with the provided name.
+%% @doc Injects a new mock process in front of the process with the provided name.<br />
 %%     Returns an error if there is no process registered under that name.
 %% @equiv new(ProcessName, #{})
 -spec new(process_name()) -> ok | {error, not_found}.
 new(ProcessName) ->
     new(ProcessName, #{}).
 
-%% @doc Injects a new mock process in front of the process with the provided name.
-%%      Options:
-%%          - <b>passthrough:</b> If true, all messages are passed through
+%% @doc Injects a new mock process in front of the process with the provided name.<br /><br />
+%%      Options:<br />
+%%          <ul>
+%%          <li>
+%%          <b><code>passthrough</code></b>: if <code>true</code>, all messages are passed through
 %%              to the process by default.
 %%              If false, messages that are not handled by any expectation are just dropped.
-%%              <b>Default:</b> <pre>true</pre>
-%%          - <b>history:</b> If true, the mocking process will keep the history of messages
-%%              received.
-%%              <b>Default:</b> <pre>true</pre>
+%%              <ul><li>default: <code>true</code></li></ul>
+%%          </li>
+%%          <li>
+%%          <b><code>history</code></b>: if <code>true</code>, the mocking process will keep
+%%          the history of messages received.
+%%              <ul><li>default: <code>true</code></li></ul>
+%%          </li>
+%%          </ul>
 -spec new(process_name(), opts()) -> ok | {error, not_found}.
 new(ProcessName, Opts) ->
     DefaultOpts = #{passthrough => true, history => true},
@@ -66,23 +72,20 @@ mocked() ->
 mocked_process(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:mocked_process/1).
 
-%% @doc Passes the current message down to the mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
+%% @doc Passes the current message down to the mocked process.<br />
+%% <b>Note</b>: this code should only be used inside an expect fun.
 -spec passthrough() -> ok.
 passthrough() ->
     nuntius_mocker:passthrough().
 
-%% @doc Passes a message down to the mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
+%% @doc Passes a message down to the mocked process.<br />
+%% <b>Note</b>: this code should only be used inside an expect fun.
 -spec passthrough(term()) -> ok.
 passthrough(Message) ->
     nuntius_mocker:passthrough(Message).
 
-%% @doc Returns the PID of the currently mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
+%% @doc Returns the PID of the currently mocked process.<br />
+%% <b>Note</b>: this code should only be used inside an expect fun.
 -spec mocked_process() -> pid().
 mocked_process() ->
     nuntius_mocker:mocked_process().
@@ -92,9 +95,8 @@ mocked_process() ->
 history(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:history/1).
 
-%% @doc Returns whether a particular message was received already.
-%%
-%% <strong> Note </strong>: it only works with <pre>history => true.</pre>
+%% @doc Returns whether a particular message was received already.<br />
+%% <b>Note</b>: it only works with <code>history => true.</code>
 -spec received(process_name(), term()) -> boolean() | {error, not_mocked}.
 received(ProcessName, Message) ->
     if_mocked(ProcessName, fun(PN) -> nuntius_mocker:received(PN, Message) end).
@@ -104,20 +106,20 @@ received(ProcessName, Message) ->
 reset_history(ProcessName) ->
     if_mocked(ProcessName, fun nuntius_mocker:reset_history/1).
 
-%% @doc Adds a new expect function to a mocked process.
-%%      When a message is received by the process, this function will be run on it.
-%%      If the message doesn't match any clause, nothing will be done.
-%%      If the process is not mocked, an error is returned.
+%% @doc Adds a new expect function to a mocked process.<br />
+%%      When a message is received by the process, this function will be run on it.<br />
+%%      If the message doesn't match any clause, nothing will be done.<br />
+%%      If the process is not mocked, an error is returned.<br />
 %%      When the function is successfully added, a reference is returned as an identifier.
 -spec expect(process_name(), expect_fun()) -> reference() | {error, not_mocked}.
 expect(ProcessName, Function) ->
     do_expect(ProcessName, erlang:make_ref(), Function).
 
-%% @doc Adds a new <em>named</em> expect function to a mocked process.
-%%      When a message is received by the process, this function will be run on it.
-%%      If the message doesn't match any clause, nothing will be done.
-%%      If the process is not mocked, an error is returned.
-%%      If there was already an expect function with that name, it's replaced.
+%% @doc Adds a new <em>named</em> expect function to a mocked process.<br />
+%%      When a message is received by the process, this function will be run on it.<br />
+%%      If the message doesn't match any clause, nothing will be done.<br />
+%%      If the process is not mocked, an error is returned.<br />
+%%      If there was already an expect function with that name, it's replaced.<br />
 %%      When the expect function is successfully added or replaced, it'll keep the name
 %%        as its identifier.
 -spec expect(process_name(), expect_name(), expect_fun()) ->
@@ -132,8 +134,8 @@ do_expect(ProcessName, ExpectId, Function) ->
                  ExpectId
               end).
 
-%% @doc Removes an expect function.
-%%      If the expect function was not already there, this function still returns 'ok'.
+%% @doc Removes an expect function.<br />
+%%      If the expect function was not already there, this function still returns 'ok'.<br />
 %%      If the process is not mocked, an error is returned.
 -spec delete(process_name(), expect_id()) -> ok | {error, not_mocked}.
 delete(ProcessName, ExpectId) ->
