@@ -47,8 +47,8 @@ new(ProcessName) ->
 %%              <ul><li>default: <code>true</code></li></ul>
 %%          </li>
 %%          <li>
-%%          <b><code>history</code></b>: if <code>true</code>, the mocking process will keep the history of messages
-%%              received.
+%%          <b><code>history</code></b>: if <code>true</code>, the mocking process will keep
+%%          the history of messages received.
 %%              <ul><li>default: <code>true</code></li></ul>
 %%          </li>
 %%          </ul>
