@@ -1,4 +1,4 @@
-%%% @doc A process that mocks another one.
+%% @hidden
 -module(nuntius_mocker).
 
 -export([start_link/2]).
@@ -32,23 +32,17 @@ mocked_process(ProcessName) ->
     ProcessPid.
 
 %% @doc Passes the current message down to the mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
 -spec passthrough() -> ok.
 passthrough() ->
     passthrough(current_message()).
 
 %% @doc Passes a message down to the mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
 -spec passthrough(term()) -> ok.
 passthrough(Message) ->
     ProcessPid = process_pid(),
     ProcessPid ! Message.
 
 %% @doc Returns the PID of the currently mocked process.
-%%
-%% <strong> Note </strong>: this code should only be used inside an expect fun.
 -spec mocked_process() -> pid().
 mocked_process() ->
     process_pid().
@@ -60,8 +54,6 @@ history(ProcessName) ->
     History.
 
 %% @doc Returns whether a particular message was received already.
-%%
-%% <strong> Note </strong>: it only works with <pre>history => true.</pre>
 -spec received(nuntius:process_name(), term()) -> boolean().
 received(ProcessName, Message) ->
     {ok, Result} = gen:call(ProcessName, '$nuntius_call', {received, Message}),
@@ -76,22 +68,12 @@ reset_history(ProcessName) ->
     ok.
 
 %% @doc Adds a new expect function to a mocked process.
-%%      When a message is received by the process, this function will be run on it.
-%%      If the message doesn't match any clause, nothing will be done.
-%%      If the process is not mocked, an error is returned.
-%%      If the expect is named, and there was already an expect function with that name,
-%%        it's replaced.
-%%      When the expect function is successfully added or replaced:
-%%        - if named, it'll keep the name as its identifier,
-%%        - otherwise, a reference is returned as an identifier
 -spec expect(nuntius:process_name(), nuntius:expect_id(), nuntius:expect_fun()) -> ok.
 expect(ProcessName, ExpectId, Function) ->
     ProcessName ! {'$nuntius_cast', {expect, Function, ExpectId}},
     ok.
 
 %% @doc Removes an expect function.
-%%      If the expect function was not already there, this function still returns 'ok'.
-%%      If the process is not mocked, an error is returned.
 -spec delete(nuntius:process_name(), nuntius:expect_id()) -> ok.
 delete(ProcessName, ExpectId) ->
     ProcessName ! {'$nuntius_cast', {delete, ExpectId}},
@@ -104,7 +86,6 @@ expects(ProcessName) ->
     {ok, Result} = gen:call(ProcessName, '$nuntius_call', expects),
     Result.
 
-%% @private
 -spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
     ProcessMonitor = erlang:monitor(process, ProcessPid),
