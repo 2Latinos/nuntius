@@ -7,7 +7,7 @@
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
          no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1,
-         passthrough_message/1]).
+         passthrough_message/1, run_expects_function_clause/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -295,6 +295,40 @@ passthrough_message(_Config) ->
             nuntius:history(echo),
         ok
     end.
+
+% @doc We make a real effort to distinguish a function_clause issued internally from a function
+% clause issued by consumer code. This test makes sure that reality is constant.
+-dialyzer([{nowarn_function, run_expects_function_clause/1}]).
+
+run_expects_function_clause(_Config) ->
+    % We make sure that a non matching function head will not provoke a test error.
+    ok = nuntius:new(echo),
+    _ = nuntius:expect(echo, fun(match_nothing_else) -> ok end),
+    echo ! match_this,
+    true = is_process_alive(whereis(echo)), % it lives
+    receive
+        _ ->
+            ok
+    after 250 ->
+        ok
+    end,
+    true = is_process_alive(whereis(echo)), % it lives
+    % ... and now we test the "opposite" (a consumer function_clause).
+    _ = nuntius:expect(echo,
+                       fun(_) ->
+                          lists:sort(fff) % this provokes a function_clause
+                       end),
+    echo ! sort_it,
+    true = is_process_alive(whereis(echo)), % it lives
+    receive
+        _ ->
+            ok
+    after 250 ->
+        ok
+    end,
+    undefined = whereis(echo). % it no longer lives
+
+    % using e.g. echo ! 2 shows that what killed the process was {lists,sort,[fff].
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).

@@ -102,15 +102,30 @@ run_expects(Message, Expects) ->
     maps:fold(fun (_Id, _Expect, {{'$nuntius', match}, _} = Result) ->
                       Result;
                   (_Id, Expect, {'$nuntius', nomatch}) ->
-                      try
-                          {{'$nuntius', match}, Expect(Message)}
+                      try Expect(Message) of
+                          R ->
+                              {{'$nuntius', match}, R}
                       catch
-                          error:function_clause ->
+                          error:function_clause:Stacktrace ->
+                              StMFA = mfa_from_stacktrace(Stacktrace),
+                              FiMFA = mfa_from_fun_info(Expect),
+                              StMFA =/= FiMFA andalso exit(self(), Stacktrace),
                               {'$nuntius', nomatch}
                       end
               end,
               {'$nuntius', nomatch},
               Expects).
+
+mfa_from_fun_info(Expect) ->
+    {module, M} = erlang:fun_info(Expect, module),
+    {name, F} = erlang:fun_info(Expect, name),
+    {arity, A} = erlang:fun_info(Expect, arity),
+    {M, F, A}.
+
+mfa_from_stacktrace(Stacktrace) ->
+    [{M, F, Args, _} | _] = Stacktrace,
+    A = length(Args),
+    {M, F, A}.
 
 maybe_passthrough(_Message, {{'$nuntius', match}, _}, _Opts) ->
     {'$nuntius', ignore};
