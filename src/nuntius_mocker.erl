@@ -40,6 +40,7 @@ passthrough() ->
 -spec passthrough(term()) -> ok.
 passthrough(Message) ->
     ProcessPid = process_pid(),
+    passed_through(true),
     ProcessPid ! Message.
 
 %% @doc Returns the PID of the currently mocked process.
@@ -138,37 +139,44 @@ handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
 
 handle_message(Message, #{expects := Expects} = State) ->
     current_message(Message),
-    ExpectsRan = run_expects(Message, Expects),
-    ExpectsRan orelse maybe_passthrough(Message, State),
-    maybe_add_event(Message, State).
+    passed_through(false),
+    ExpectsMatched = run_expects(Message, Expects),
+    _ = maybe_passthrough(Message, ExpectsMatched, State),
+    maybe_add_event({Message, ExpectsMatched}, State).
 
 run_expects(Message, Expects) ->
-    maps:fold(fun (_Id, _Expect, true = _Done) ->
-                      true;
-                  (_Id, Expect, false) ->
+    maps:fold(fun (_Id, _Expect, {{'$nuntius', match}, _} = Result) ->
+                      Result;
+                  (_Id, Expect, {'$nuntius', nomatch}) ->
                       try
-                          Expect(Message),
-                          true
+                          {{'$nuntius', match}, Expect(Message)}
                       catch
                           error:function_clause ->
-                              false
+                              {'$nuntius', nomatch}
                       end
               end,
-              false,
+              {'$nuntius', nomatch},
               Expects).
 
-maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
-    ignore;
-maybe_passthrough(Message, _State) ->
-    ProcessPid = process_pid(),
-    ProcessPid ! Message.
+maybe_passthrough(_Message, {{'$nuntius', match}, _}, _Opts) ->
+    {'$nuntius', ignore};
+maybe_passthrough(_Message, _ExpectsMatched, #{opts := #{passthrough := false}}) ->
+    {'$nuntius', ignore};
+maybe_passthrough(Message, _ExpectsMatched, _State) ->
+    passthrough(Message).
 
 maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
     State;
-maybe_add_event(Message, State) ->
+maybe_add_event({Message, ExpectsMatched}, State) ->
     maps:update_with(history,
                      fun(History) ->
-                        [#{timestamp => erlang:system_time(), message => Message} | History]
+                        PassedThrough = passed_through(),
+                        passed_through(false),
+                        [#{timestamp => erlang:system_time(),
+                           message => Message,
+                           mocked => ExpectsMatched =/= {'$nuntius', nomatch},
+                           passed_through => PassedThrough}
+                         | History]
                      end,
                      State).
 
@@ -183,3 +191,9 @@ current_message(Message) ->
 
 current_message() ->
     get(current_message).
+
+passed_through(Flag) ->
+    put(passed_through, Flag).
+
+passed_through() ->
+    get(passed_through).
