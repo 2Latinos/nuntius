@@ -21,6 +21,7 @@ init_per_suite(Config) ->
     Config.
 
 end_per_suite(Config) ->
+    nuntius:stop(),
     Config.
 
 init_per_testcase(_TestCase, Config) ->
