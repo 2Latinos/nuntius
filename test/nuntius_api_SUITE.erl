@@ -207,7 +207,7 @@ expect_message(_Config) ->
     echo ! boomerang,
     receive
         {echoed, boomerang} ->
-            [#{expects_matched := true, passed_through := false}] = nuntius:history(echo),
+            [#{mocked := true, passed_through := false}] = nuntius:history(echo),
             ok
     after 250 ->
         error(timeout)
@@ -219,7 +219,7 @@ expect_message(_Config) ->
             _ ->
                 ignored
         after 250 ->
-            [_, #{expects_matched := false, passed_through := false}] = nuntius:history(echo),
+            [_, #{mocked := false, passed_through := false}] = nuntius:history(echo),
             ok
         end.
 
@@ -238,7 +238,7 @@ mocked_process(_Config) ->
     echo ! boom,
     receive
         from_mocked ->
-            [#{expects_matched := true, passed_through := false}] = nuntius:history(echo),
+            [#{mocked := true, passed_through := false}] = nuntius:history(echo),
             ok % ... and if we got here we have echo's Pid inside the expectation
     after 250 ->
         error(timeout)
@@ -256,7 +256,7 @@ passthrough(_Config) ->
             error(received) % ... but not from the pass through
     after 250 ->
         % last message was explicitly passed through
-        [#{expects_matched := true, passed_through := true}] = nuntius:history(echo),
+        [#{mocked := true, passed_through := true}] = nuntius:history(echo),
         ok
     end.
 
@@ -290,8 +290,8 @@ passthrough_message(_Config) ->
             error(received) % ... but we don't get it back (outside the process)
     after 250 ->
         % messages were explicitly passed through
-        [#{expects_matched := true, passed_through := true},
-         #{expects_matched := true, passed_through := true}] =
+        [#{mocked := true, passed_through := true},
+         #{mocked := true, passed_through := true}] =
             nuntius:history(echo),
         ok
     end.

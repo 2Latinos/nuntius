@@ -174,7 +174,7 @@ maybe_add_event({Message, ExpectsMatched}, State) ->
                         passed_through(false),
                         [#{timestamp => erlang:system_time(),
                            message => Message,
-                           expects_matched => ExpectsMatched =/= {'$nuntius', nomatch},
+                           mocked => ExpectsMatched =/= {'$nuntius', nomatch},
                            passed_through => PassedThrough}
                          | History]
                      end,

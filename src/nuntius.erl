@@ -12,7 +12,7 @@
 -type event() ::
     #{timestamp := integer(),
       message := term(),
-      expects_matched := boolean(),
+      mocked := boolean(),
       passed_through := boolean()}.
 -type opts() :: #{passthrough => boolean(), history => boolean()}.
 -type expect_fun() :: fun((_) -> _).

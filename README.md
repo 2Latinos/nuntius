@@ -34,8 +34,8 @@ intercept (and optionally handle) every message that was supposed to go to the l
 
 ## Options for the mock process
 
-The following allow you to configure the interaction between the mock and mocked processes, as
-well as other elements for debugging:
+The following parameters allow you to configure the interaction between the mock and mocked
+processes, as well as other elements for debugging:
 
 * `passthrough`: when `true` (default: `true`) all messages received by the mock process are
 passed through to the mocked process,
@@ -49,7 +49,7 @@ History elements are classified with 4 keys:
 * `timestamp`: an integer representing Erlang system time in native time unit,
 * `message`: the message that was received and/or potentially handled by expectations
 (or passed through),
-* `expects_matched`: an indication of whether or not any of the expecations you declared handled
+* `mocked`: an indication of whether or not any of the expecations you declared handled
 the message,
 * `passed_through`: an indication of whether or not the received message was passed through to
 the mocked process.
@@ -58,10 +58,12 @@ the mocked process.
 
 `nuntius` tries to execute your expectations by simply calling their declarations inside a
 `try-catch` expression. Because of this, non-matching expectations will return a `function_clause`,
-that is caught..
+that is caught.
 Since it's not possible (at this moment) to distinguish a `function_clause` provoked by `nuntius`'
-internal code or your own, we propose you always declare a catch-all expect that'll signal you
-that a given message wasn't handled. This can also be consulted by looking at the message history.
+internal code or your own, we propose you to make sure your functions don't fail with a 
+`function_clause`.
+You can also check the message history to understand if a given message was mocked and/or
+passed through.
 
 ## Documentation
 
