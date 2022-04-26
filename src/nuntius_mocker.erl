@@ -138,37 +138,42 @@ handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
 
 handle_message(Message, #{expects := Expects} = State) ->
     current_message(Message),
-    ExpectsRan = run_expects(Message, Expects),
-    ExpectsRan orelse maybe_passthrough(Message, State),
-    maybe_add_event(Message, State).
+    ExpectsMatched = run_expects(Message, Expects),
+    Passthrough = maybe_passthrough(Message, State),
+    maybe_add_event({Message, ExpectsMatched, Passthrough}, State).
 
 run_expects(Message, Expects) ->
-    maps:fold(fun (_Id, _Expect, true = _Done) ->
-                      true;
-                  (_Id, Expect, false) ->
+    maps:fold(fun (_Id, _Expect, {{'$nuntius', match}, _} = Result) ->
+                      Result;
+                  (_Id, Expect, {'$nuntius', nomatch}) ->
                       try
-                          Expect(Message),
-                          true
+                          {{'$nuntius', match}, Expect(Message)}
                       catch
                           error:function_clause ->
-                              false
+                              {'$nuntius', nomatch}
                       end
               end,
-              false,
+              {'$nuntius', nomatch},
               Expects).
 
 maybe_passthrough(_Message, #{opts := #{passthrough := false}}) ->
-    ignore;
+    {'$nuntius', ignore};
 maybe_passthrough(Message, _State) ->
     ProcessPid = process_pid(),
     ProcessPid ! Message.
 
 maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
     State;
-maybe_add_event(Message, State) ->
+maybe_add_event({Message, ExpectsMatched0, Passthrough}, State) ->
+    ExpectsMatched = ExpectsMatched0 =/= {'$nuntius', nomatch},
     maps:update_with(history,
                      fun(History) ->
-                        [#{timestamp => erlang:system_time(), message => Message} | History]
+                        [#{timestamp => erlang:system_time(),
+                           message => Message,
+                           expects_matched => ExpectsMatched,
+                           passed_through =>
+                               ExpectsMatched andalso Passthrough =/= {'$nuntius', ignore}}
+                         | History]
                      end,
                      State).
 

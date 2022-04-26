@@ -9,7 +9,11 @@
 -export([expect/2, expect/3, delete/2, expects/1]).
 
 -type process_name() :: atom().
--type event() :: #{timestamp := integer(), message := term()}.
+-type event() ::
+    #{timestamp := integer(),
+      message := term(),
+      expects_matched := boolean(),
+      passed_through := boolean()}.
 -type opts() :: #{passthrough => boolean(), history => boolean()}.
 -type expect_fun() :: fun((_) -> _).
 -type expect_name() :: atom().

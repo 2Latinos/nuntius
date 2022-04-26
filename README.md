@@ -32,6 +32,15 @@ intercept (and optionally handle) every message that was supposed to go to the l
   * allows mock processes to discard intercepted messages entirely,
   * allows history collection of messages received by the mock processes for further analysis.
 
+## Caveats
+
+`nuntius` tries to execute your expectations by simply calling their declarations inside a
+`try-catch` expression. Because of this, non-matching expectations will return a `function_clause`,
+that is caught..
+Since it's not possible (at this moment) to distinguish a `function_clause` provoked by `nuntius`'
+internal code or your own, we propose you always declare a catch-all expect that'll signal you
+that a given message wasn't handled. This can also be consulted by looking at the message history.
+
 ## Documentation
 
 Documentation is generated with:
