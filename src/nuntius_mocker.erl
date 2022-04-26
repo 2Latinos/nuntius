@@ -47,7 +47,7 @@ init(ProcessName, ProcessPid, Opts) ->
     reregister(ProcessName, self()),
     erlang:put('$nuntius_mocker_process', ProcessPid),
     proc_lib:init_ack({ok, self()}),
-    nuntius_proc:process(ProcessPid),
+    nuntius_proc:pid(ProcessPid),
     loop(#{process_name => ProcessName,
            process_monitor => ProcessMonitor,
            history => [],
@@ -56,7 +56,7 @@ init(ProcessName, ProcessPid, Opts) ->
 
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
-    ProcessPid = nuntius_proc:process(),
+    ProcessPid = nuntius_proc:pid(),
     #{process_monitor := ProcessMonitor} = State,
     NextState =
         receive

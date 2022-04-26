@@ -94,7 +94,7 @@ passthrough(Message) ->
 %% <b>Note</b>: this code should only be used inside an expect fun.
 -spec mocked_process() -> pid().
 mocked_process() ->
-    nuntius_proc:process().
+    nuntius_proc:pid().
 
 %% @doc Returns the history of messages received by a mocked process.
 -spec history(process_name()) -> [event()] | {error, not_mocked}.
