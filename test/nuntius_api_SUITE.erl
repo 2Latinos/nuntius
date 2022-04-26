@@ -305,7 +305,7 @@ call(Process, Message) ->
     receive
         {Ref, Result} ->
             Result
-    after 1000 ->
+    after 250 ->
         error(#{reason => timeout,
                 process => Process,
                 message => Message})
