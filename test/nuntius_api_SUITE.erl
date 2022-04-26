@@ -290,8 +290,7 @@ passthrough_message(_Config) ->
             error(received) % ... but we don't get it back (outside the process)
     after 250 ->
         % messages were explicitly passed through
-        [#{mocked := true, passed_through := true},
-         #{mocked := true, passed_through := true}] =
+        [#{mocked := true, passed_through := true}, #{mocked := true, passed_through := true}] =
             nuntius:history(echo),
         ok
     end.

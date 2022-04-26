@@ -60,7 +60,7 @@ the mocked process.
 `try-catch` expression. Because of this, non-matching expectations will return a `function_clause`,
 that is caught.
 Since it's not possible (at this moment) to distinguish a `function_clause` provoked by `nuntius`'
-internal code or your own, we propose you to make sure your functions don't fail with a 
+internal code or your own, we propose you to make sure your functions don't fail with a
 `function_clause`.
 You can also check the message history to understand if a given message was mocked and/or
 passed through.
