@@ -1,7 +1,7 @@
 # nuntius [![Erlang CI][ci-img]][ci]
 
 [ci]: https://github.com/2Latinos/nuntius
-[ci-img]: https://github.com/2Latinos/nuntius/workflows/erlang/badge.svg
+[ci-img]: https://github.com/2Latinos/nuntius/actions/workflows/erlang.yml/badge.svg
 
 `nuntius` is an Erlang/OTP library to mock registered processes. Its main use case is to intercept
 messages sent to specific processes and to allow the consumer to act upon them.
