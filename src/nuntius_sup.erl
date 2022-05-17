@@ -4,9 +4,8 @@
 
 -behaviour(supervisor).
 
--export([start_link/0]).
+-export([init/1, start_link/0]).
 -export([mocked/0]).
--export([init/1]).
 -export([start_mock/2, stop_mock/1]).
 
 -spec start_link() -> {ok, pid()} | {error, term()}.

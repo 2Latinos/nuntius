@@ -1,11 +1,21 @@
 %% @hidden
 -module(nuntius_mocker).
 
--export([start_link/2]).
--export([mocked_process/1, history/1, received/2, reset_history/1, delete/1]).
--export([passthrough/0, passthrough/1, mocked_process/0]).
--export([expect/3, delete/2, expects/1]).
--export([init/3]).
+-export([call/2, cast/2]).
+-export([delete/1, process/1]).
+-export([init/3, start_link/2]).
+
+%% @doc Sends an asynchronous request to the mocker.
+-spec cast(nuntius:process_name(), nuntius:message()) -> ok.
+cast(ProcessName, Message) ->
+    ProcessName ! {'$nuntius_cast', Message},
+    ok.
+
+%% @doc Makes a synchronous request to the mocker.
+-spec call(nuntius:process_name(), nuntius:message()) -> term().
+call(ProcessName, Message) ->
+    {ok, Result} = gen:call(ProcessName, '$nuntius_call', Message),
+    Result.
 
 %% @doc Boots up a mocking process.
 %%      If the process to be mocked doesn't exist, returns <pre>ignore</pre>.
@@ -21,79 +31,23 @@ start_link(ProcessName, Opts) ->
 %% @doc Reregisters the mocked process with its name, thus removing the mock.
 -spec delete(nuntius:process_name()) -> ok.
 delete(ProcessName) ->
-    reregister(ProcessName, mocked_process(ProcessName)).
+    reregister(ProcessName, process(ProcessName)).
 
 %% @doc Returns the PID of a mocked process (the original one with that name).
--spec mocked_process(nuntius:process_name()) -> pid().
-mocked_process(ProcessName) ->
+-spec process(nuntius:process_name()) -> pid().
+process(ProcessName) ->
     {dictionary, Dict} = erlang:process_info(whereis(ProcessName), dictionary),
-    {'$nuntius_mocker_mocked_process', ProcessPid} =
-        lists:keyfind('$nuntius_mocker_mocked_process', 1, Dict),
+    {'$nuntius_mocker_process', ProcessPid} =
+        lists:keyfind('$nuntius_mocker_process', 1, Dict),
     ProcessPid.
-
-%% @doc Passes the current message down to the mocked process.
--spec passthrough() -> ok.
-passthrough() ->
-    passthrough(current_message()).
-
-%% @doc Passes a message down to the mocked process.
--spec passthrough(term()) -> ok.
-passthrough(Message) ->
-    ProcessPid = process_pid(),
-    passed_through(true),
-    ProcessPid ! Message.
-
-%% @doc Returns the PID of the currently mocked process.
--spec mocked_process() -> pid().
-mocked_process() ->
-    process_pid().
-
-%% @doc Returns the history of messages received by a mocked process.
--spec history(nuntius:process_name()) -> [nuntius:event()].
-history(ProcessName) ->
-    {ok, History} = gen:call(ProcessName, '$nuntius_call', history),
-    History.
-
-%% @doc Returns whether a particular message was received already.
--spec received(nuntius:process_name(), term()) -> boolean().
-received(ProcessName, Message) ->
-    {ok, Result} = gen:call(ProcessName, '$nuntius_call', {received, Message}),
-    Result.
-
-%% @doc Erases the history for a mocked process.
-%%      Note that there is no gen:cast(...),
-%%      gen_server and others basically just send the message and move on, like us.
--spec reset_history(nuntius:process_name()) -> ok.
-reset_history(ProcessName) ->
-    ProcessName ! {'$nuntius_cast', reset_history},
-    ok.
-
-%% @doc Adds a new expect function to a mocked process.
--spec expect(nuntius:process_name(), nuntius:expect_id(), nuntius:expect_fun()) -> ok.
-expect(ProcessName, ExpectId, Function) ->
-    ProcessName ! {'$nuntius_cast', {expect, Function, ExpectId}},
-    ok.
-
-%% @doc Removes an expect function.
--spec delete(nuntius:process_name(), nuntius:expect_id()) -> ok.
-delete(ProcessName, ExpectId) ->
-    ProcessName ! {'$nuntius_cast', {delete, ExpectId}},
-    ok.
-
-%% @doc Returns the list of expect functions for a process.
--spec expects(nuntius:process_name()) ->
-                 {ok, #{nuntius:expect_id() => nuntius:expect_fun()}}.
-expects(ProcessName) ->
-    {ok, Result} = gen:call(ProcessName, '$nuntius_call', expects),
-    Result.
 
 -spec init(nuntius:process_name(), pid(), nuntius:opts()) -> no_return().
 init(ProcessName, ProcessPid, Opts) ->
     ProcessMonitor = erlang:monitor(process, ProcessPid),
     reregister(ProcessName, self()),
-    erlang:put('$nuntius_mocker_mocked_process', ProcessPid),
+    erlang:put('$nuntius_mocker_process', ProcessPid),
     proc_lib:init_ack({ok, self()}),
-    process_pid(ProcessPid),
+    nuntius_proc:pid(ProcessPid),
     loop(#{process_name => ProcessName,
            process_monitor => ProcessMonitor,
            history => [],
@@ -102,7 +56,7 @@ init(ProcessName, ProcessPid, Opts) ->
 
 %% @todo Verify if, on process termination, we need to do something more than just dying.
 loop(State) ->
-    ProcessPid = process_pid(),
+    ProcessPid = nuntius_proc:pid(),
     #{process_monitor := ProcessMonitor} = State,
     NextState =
         receive
@@ -138,8 +92,8 @@ handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:remove(ExpectId, Expects)}.
 
 handle_message(Message, #{expects := Expects} = State) ->
-    current_message(Message),
-    passed_through(false),
+    nuntius_proc:current_message(Message),
+    nuntius_proc:passed_through(false),
     ExpectsMatched = run_expects(Message, Expects),
     _ = maybe_passthrough(Message, ExpectsMatched, State),
     maybe_add_event({Message, ExpectsMatched}, State).
@@ -148,30 +102,45 @@ run_expects(Message, Expects) ->
     maps:fold(fun (_Id, _Expect, {{'$nuntius', match}, _} = Result) ->
                       Result;
                   (_Id, Expect, {'$nuntius', nomatch}) ->
-                      try
-                          {{'$nuntius', match}, Expect(Message)}
+                      try Expect(Message) of
+                          R ->
+                              {{'$nuntius', match}, R}
                       catch
-                          error:function_clause ->
+                          error:function_clause:Stacktrace ->
+                              StMFA = mfa_from_stacktrace(Stacktrace),
+                              FiMFA = mfa_from_fun_info(Expect),
+                              StMFA =/= FiMFA andalso exit(self(), Stacktrace),
                               {'$nuntius', nomatch}
                       end
               end,
               {'$nuntius', nomatch},
               Expects).
 
+mfa_from_fun_info(Expect) ->
+    {module, M} = erlang:fun_info(Expect, module),
+    {name, F} = erlang:fun_info(Expect, name),
+    {arity, A} = erlang:fun_info(Expect, arity),
+    {M, F, A}.
+
+mfa_from_stacktrace(Stacktrace) ->
+    [{M, F, Args, _} | _] = Stacktrace,
+    A = length(Args),
+    {M, F, A}.
+
 maybe_passthrough(_Message, {{'$nuntius', match}, _}, _Opts) ->
     {'$nuntius', ignore};
 maybe_passthrough(_Message, _ExpectsMatched, #{opts := #{passthrough := false}}) ->
     {'$nuntius', ignore};
 maybe_passthrough(Message, _ExpectsMatched, _State) ->
-    passthrough(Message).
+    nuntius_proc:passthrough(Message).
 
 maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
     State;
 maybe_add_event({Message, ExpectsMatched}, State) ->
     maps:update_with(history,
                      fun(History) ->
-                        PassedThrough = passed_through(),
-                        passed_through(false),
+                        PassedThrough = nuntius_proc:passed_through(),
+                        nuntius_proc:passed_through(false),
                         [#{timestamp => erlang:system_time(),
                            message => Message,
                            mocked => ExpectsMatched =/= {'$nuntius', nomatch},
@@ -179,21 +148,3 @@ maybe_add_event({Message, ExpectsMatched}, State) ->
                          | History]
                      end,
                      State).
-
-process_pid(ProcessPid) ->
-    put(process_pid, ProcessPid).
-
-process_pid() ->
-    get(process_pid).
-
-current_message(Message) ->
-    put(current_message, Message).
-
-current_message() ->
-    get(current_message).
-
-passed_through(Flag) ->
-    put(passed_through, Flag).
-
-passed_through() ->
-    get(passed_through).
