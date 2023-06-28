@@ -118,14 +118,19 @@ run_expects(Message, Expects) ->
 
 mfa_from_fun_info(Expect) ->
     {module, M} = erlang:fun_info(Expect, module),
-    {name, F} = erlang:fun_info(Expect, name),
+    {name, F0} = erlang:fun_info(Expect, name),
+    F = coerce_fun(F0),
     {arity, A} = erlang:fun_info(Expect, arity),
     {M, F, A}.
 
 mfa_from_stacktrace(Stacktrace) ->
-    [{M, F, Args, _} | _] = Stacktrace,
+    [{M, F0, Args, _} | _] = Stacktrace,
     A = length(Args),
+    F = coerce_fun(F0),
     {M, F, A}.
+
+coerce_fun(F) ->
+    re:replace(atom_to_list(F), "-inlined-", "-fun-", [{return, list}]).
 
 maybe_passthrough(_Message, {{'$nuntius', match}, _}, _Opts) ->
     {'$nuntius', ignore};
