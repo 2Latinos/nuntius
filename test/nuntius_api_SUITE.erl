@@ -115,8 +115,8 @@ history(_Config) ->
     3 = add_one(2),
     % The message appears in the history
     [#{timestamp := T1, message := M1}, #{timestamp := T2, message := M2}] =
-        lists:sort(
-            nuntius:history(plus_oner)),
+        lists:sort(fun(#{timestamp := Left}, #{timestamp := Right}) -> Left =< Right end,
+                   nuntius:history(plus_oner)),
     true = T1 < T2,
     true = nuntius:received(plus_oner, M1),
     true = nuntius:received(plus_oner, M2),
