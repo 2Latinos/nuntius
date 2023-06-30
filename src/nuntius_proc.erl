@@ -16,7 +16,8 @@ passthrough() ->
 passthrough(Message) ->
     ProcessPid = pid(),
     passed_through(true),
-    ProcessPid ! Message.
+    ProcessPid ! Message,
+    ok.
 
 %% @doc Returns the PID of the currently mocked process.
 -spec pid() -> pid().
