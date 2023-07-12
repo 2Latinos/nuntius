@@ -17,7 +17,10 @@
 -type expect_id() :: reference() | expect_name().
 -type expect_name() :: atom().
 -type message() :: term().
--type opts() :: #{passthrough => boolean(), history => boolean()}.
+-type opts() ::
+    #{passthrough => boolean(),
+      history => boolean(),
+      exit_on_nomatch => boolean()}.
 -type process_name() :: atom().
 
 -export_type([event/0, expect_fun/0, expect_id/0]).
