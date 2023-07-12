@@ -7,7 +7,8 @@
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
          no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1,
-         passthrough_message/1, run_expects_function_clause/1]).
+         passthrough_message/1, run_expects_function_clause/1, exit_on_error_inside_expectation/1,
+         exit_on_nomatch/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -330,6 +331,47 @@ run_expects_function_clause(_Config) ->
     undefined = whereis(echo). % it no longer lives
 
     % using e.g. echo ! 2 shows that what killed the process was {lists,sort,[fff].
+
+exit_on_error_inside_expectation(_Config) ->
+    % We make sure that an error inside an expectation will be visible to the consumer.
+    ok = nuntius:new(plus_oner),
+    _ = nuntius:expect(plus_oner, fun ({_Self, _Ref, 1}) -> lists:sort(fff) end),
+
+    % Output'll be something like:
+    % exception exit: {nuntius,nomatch,
+    %                     [{lists,sort,[fff],[{file,"lists.erl"},{line,512}]},
+    %                      {nuntius_mocker,'-run_expects/3-fun-1-',3,
+    %                          [{file,
+    %                               "/home/user/nuntius/src/nuntius_mocker.erl"},
+    %                           {line,108}]}
+    % The error is inside the expectation so it's "less" visible.
+    try
+        add_one(1),
+        exit(wont_get_here)
+    catch error:_ -> % You have to remove this to see how the consumer would see it
+        ok
+    end.
+
+exit_on_nomatch(_Config) ->
+    % We make sure that a non matching function head will throw an exception.
+    ok = nuntius:new(plus_oner),
+    _ = nuntius:expect(plus_oner, fun ({_Self, _Ref, 14}) -> not_matched end),
+
+    % Output'll be something like:
+    % exception exit: {nuntius,nomatch,
+    %                     [{nuntius_api_SUITE,'-exit_on_nomatch/1-fun-0-',
+    %                          [{<0.551.0>,#Ref<0.3533323057.4076863489.191396>,
+    %                            13}],
+    %                          [{file,
+    %                               "/home/user/nuntius/test/nuntius_api_SUITE.erl"},
+    %                           {line,350}]}
+    % The error is in the expectation head so it's visible.
+    try
+        add_one(13),
+        exit(wont_get_here)
+    catch error:_ -> % You have to remove this to see how the consumer would see it
+        ok
+    end.
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).
