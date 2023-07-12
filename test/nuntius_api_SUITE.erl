@@ -267,7 +267,7 @@ passthrough(_Config) ->
 passthrough_message(_Config) ->
     ok = nuntius:new(echo, #{passthrough => false}),
     _ = nuntius:expect(echo,
-                       fun(_) ->
+                       fun(message) ->
                           % We pass a specific message to the mocked process
                           nuntius:passthrough({self(), make_ref(), message}),
                           receive
@@ -281,19 +281,20 @@ passthrough_message(_Config) ->
     % And now, for a different test...
     Self = self(),
     _ = nuntius:expect(echo,
-                       fun(_) ->
+                       fun(new_message) ->
                           % We pass another specific message to the mocked process
-                          nuntius:passthrough({Self, make_ref(), new_message})
+                          Mocked = nuntius:mocked_process(),
+                          nuntius:passthrough({Self, make_ref(), {new_message, Mocked}})
                        end),
     echo ! new_message,
+    Mocked = nuntius:mocked_process(echo),
     receive
-        {_, new_message} ->
-            error(received) % ... but we don't get it back (outside the process)
+        {_, {new_message, Mocked}} ->
+            % ... and we get it back (from the mocking process - notice Mocked)
+            [#{mocked := true, passed_through := true}, #{mocked := true, passed_through := true}] =
+                nuntius:history(echo)
     after 250 ->
-        % messages were explicitly passed through
-        [#{mocked := true, passed_through := true}, #{mocked := true, passed_through := true}] =
-            nuntius:history(echo),
-        ok
+        error(not_received)
     end.
 
 % @doc We make a real effort to distinguish a function_clause issued internally from a function
