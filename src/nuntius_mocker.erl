@@ -106,36 +106,30 @@ run_expects(Message, Expects0, #{exit_on_nomatch := ExitOnNoMatch}) ->
                             Match;
                         ({_Id, Expect}, #{matched := false, stack := StackTrace0}) ->
                             try Expect(Message) of
+                                {'$nuntius', nomatch} ->
+                                    #{matched => false, stack => StackTrace0};
                                 Match ->
                                     #{matched => true,
                                       with => Match,
                                       stack => StackTrace0}
                             catch
                                 _Class:_Reason:StackTrace ->
-                                    #{matched => false,
-                                      with => undefined,
-                                      stack => StackTrace}
+                                    #{matched => false, stack => StackTrace}
                             end
                     end,
-                    #{matched => false,
-                      with => undefined,
-                      stack => undefined},
+                    #{matched => false, stack => undefined},
                     Expects),
-    #{matched := Matched,
-      with := Match,
-      stack := StackTrace} =
-        ExpectsMatched,
-    case {Matched, Match, StackTrace} of
-        {true, {'$nuntius', nomatch}, StackTrace} when ExitOnNoMatch ->
-            exit({nuntius, nomatch, StackTrace});
-        {false, undefined, StackTrace} ->
+    Matched = maps:get(matched, ExpectsMatched),
+    With = maps:get(with, ExpectsMatched, undefined),
+    StackTrace = maps:get(stack, ExpectsMatched),
+    case {Matched, With, StackTrace} of
+        {false, undefined, StackTrace} when ExitOnNoMatch ->
             exit({nuntius, nomatch, StackTrace});
         _Other ->
             ExpectsMatched
     end.
 
-maybe_passthrough(_Message, #{matched := true, with := With}, _Opts)
-    when With =/= {'$nuntius', nomatch} ->
+maybe_passthrough(_Message, #{matched := true}, _Opts) ->
     ok;
 maybe_passthrough(_Message, _ExpectsMatched, #{opts := #{passthrough := false}}) ->
     ok;
@@ -149,10 +143,10 @@ maybe_add_event({Message, ExpectsMatched}, State) ->
                      fun(History) ->
                         PassedThrough = nuntius_proc:passed_through(),
                         nuntius_proc:passed_through(false),
-                        #{matched := Matched, with := With} = ExpectsMatched,
+                        #{matched := Matched} = ExpectsMatched,
                         [#{timestamp => erlang:system_time(),
                            message => Message,
-                           mocked => Matched andalso With =/= {'$nuntius', nomatch},
+                           mocked => Matched,
                            passed_through => PassedThrough}
                          | History]
                      end,
