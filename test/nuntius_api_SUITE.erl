@@ -304,7 +304,7 @@ passthrough_message(_Config) ->
 
 run_expects_function_clause(_Config) ->
     % We make sure that a non matching function head will not provoke a test error.
-    ok = nuntius:new(echo),
+    ok = nuntius:new(echo, #{exit_on_nomatch => false}),
     _ = nuntius:expect(echo, fun(match_nothing_else) -> ok end),
     echo ! match_this,
     true = is_process_alive(whereis(echo)), % it lives
@@ -328,7 +328,7 @@ run_expects_function_clause(_Config) ->
     after 250 ->
         ok
     end,
-    undefined = whereis(echo). % it no longer lives
+    true = is_process_alive(whereis(echo)). % it still lives (exception is ignored)
 
     % using e.g. echo ! 2 shows that what killed the process was {lists,sort,[fff].
 
