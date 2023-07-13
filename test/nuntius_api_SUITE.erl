@@ -7,7 +7,8 @@
          end_per_testcase/2]).
 -export([default_mock/1, error_not_found/1, delete_mock/1, mocked_processes/1, history/1,
          no_history/1, expect/1, expect_message/1, mocked_process/1, passthrough/1,
-         passthrough_message/1, run_expects_function_clause/1]).
+         passthrough_message/1, run_expects_function_clause/1, exit_on_error_inside_expectation/1,
+         exit_on_nomatch/1]).
 
 -elvis([{elvis_style, dont_repeat_yourself, #{min_complexity => 13}}]).
 
@@ -45,7 +46,7 @@ default_mock(_Config) ->
     % Original state
     2 = add_one(1),
     % We mock the process but we don't handle any message
-    ok = nuntius:new(plus_oner),
+    ok = nuntius:new(plus_oner, #{exit_on_nomatch => false}),
     % So, nothing changes
     2 = add_one(1),
     ok.
@@ -53,7 +54,7 @@ default_mock(_Config) ->
 %% @doc If the process to mock doesn't exist, an error is raised.
 error_not_found(_Config) ->
     % By default, you can't mock nonexisting processes
-    {error, not_found} = nuntius:new(non_existing_process),
+    {error, not_found} = nuntius:new(non_existing_process, #{exit_on_nomatch => false}),
     ok.
 
 %% @doc Processes can be unmocked.
@@ -65,7 +66,7 @@ delete_mock(Config) ->
     PlusOner = whereis(plus_oner),
     % Mocking it and later deleting the mock
     % restores the registered name to the mocked process
-    ok = nuntius:new(plus_oner),
+    ok = nuntius:new(plus_oner, #{exit_on_nomatch => false}),
     false = PlusOner == whereis(plus_oner),
     ok = nuntius:delete(plus_oner),
     PlusOner = whereis(plus_oner),
@@ -81,13 +82,13 @@ mocked_processes(Config) ->
     {error, not_mocked} = nuntius:mocked_process(plus_oner),
     % Once you mock it, you can get the original PID
     {plus_oner_pid, PlusOner} = lists:keyfind(plus_oner_pid, 1, Config),
-    ok = nuntius:new(plus_oner),
+    ok = nuntius:new(plus_oner, #{exit_on_nomatch => false}),
     false = PlusOner == whereis(plus_oner),
     PlusOner = nuntius:mocked_process(plus_oner),
     % And the process appears in the list of mocked processes
     [plus_oner] = nuntius:mocked(),
     % If you mock two processes, they both appear in the list
-    ok = nuntius:new(echo),
+    ok = nuntius:new(echo, #{exit_on_nomatch => false}),
     [echo, plus_oner] =
         lists:sort(
             nuntius:mocked()),
@@ -101,7 +102,7 @@ history(_Config) ->
     {error, not_mocked} = nuntius:history(plus_oner),
     {error, not_mocked} = nuntius:received(plus_oner, any_message),
     % We mock it
-    ok = nuntius:new(plus_oner),
+    ok = nuntius:new(plus_oner, #{exit_on_nomatch => false}),
     % Originally the history is empty
     [] = nuntius:history(plus_oner),
     false = nuntius:received(plus_oner, 1),
@@ -115,8 +116,8 @@ history(_Config) ->
     3 = add_one(2),
     % The message appears in the history
     [#{timestamp := T1, message := M1}, #{timestamp := T2, message := M2}] =
-        lists:sort(
-            nuntius:history(plus_oner)),
+        lists:sort(fun(#{timestamp := Left}, #{timestamp := Right}) -> Left =< Right end,
+                   nuntius:history(plus_oner)),
     true = T1 < T2,
     true = nuntius:received(plus_oner, M1),
     true = nuntius:received(plus_oner, M2),
@@ -135,7 +136,7 @@ history(_Config) ->
     ok.
 
 no_history(_Config) ->
-    ok = nuntius:new(plus_oner, #{history => false}),
+    ok = nuntius:new(plus_oner, #{history => false, exit_on_nomatch => false}),
     % Originally the history is empty
     [] = nuntius:history(plus_oner),
     false = nuntius:received(plus_oner, 1),
@@ -161,7 +162,7 @@ no_history(_Config) ->
 %      messages, here.
 expect(_Config) ->
     Expects = fun() -> nuntius:expects(plus_oner) end,
-    ok = nuntius:new(plus_oner),
+    ok = nuntius:new(plus_oner, #{exit_on_nomatch => false}),
     % Add (unnamed) expectations...
     Ref1 = nuntius:expect(plus_oner, fun(_) -> ok end),
     true = is_reference(Ref1),
@@ -200,7 +201,7 @@ expect(_Config) ->
     #{named_exp2 := _} = Expects().
 
 expect_message(_Config) ->
-    ok = nuntius:new(echo, #{passthrough => false}),
+    ok = nuntius:new(echo, #{passthrough => false, exit_on_nomatch => false}),
     Self = self(),
     % Have the expectation send a message back to us
     _ = nuntius:expect(echo, boom_echo, fun(boomerang = M) -> Self ! {echoed, M} end),
@@ -229,7 +230,7 @@ expect_message(_Config) ->
 mocked_process(_Config) ->
     Pid = whereis(echo),
     Self = self(),
-    ok = nuntius:new(echo),
+    ok = nuntius:new(echo, #{exit_on_nomatch => false}),
     _ = nuntius:expect(echo,
                        fun(boom) ->
                           Pid = nuntius:mocked_process(),
@@ -248,7 +249,7 @@ mocked_process(_Config) ->
 % @doc We pass the expectation message through to the mocked process
 %      We play with message passing for extra guarantees
 passthrough(_Config) ->
-    ok = nuntius:new(echo),
+    ok = nuntius:new(echo, #{exit_on_nomatch => false}),
     % We pass a message to the mocked process
     _ = nuntius:expect(echo, fun(_) -> nuntius:passthrough() end),
     call(echo, back), % ... and since it's an echo process, we get it back
@@ -265,9 +266,9 @@ passthrough(_Config) ->
 %        process
 %      We play with message passing for extra guarantees
 passthrough_message(_Config) ->
-    ok = nuntius:new(echo, #{passthrough => false}),
+    ok = nuntius:new(echo, #{passthrough => false, exit_on_nomatch => false}),
     _ = nuntius:expect(echo,
-                       fun(_) ->
+                       fun(message) ->
                           % We pass a specific message to the mocked process
                           nuntius:passthrough({self(), make_ref(), message}),
                           receive
@@ -281,28 +282,30 @@ passthrough_message(_Config) ->
     % And now, for a different test...
     Self = self(),
     _ = nuntius:expect(echo,
-                       fun(_) ->
+                       fun(new_message) ->
                           % We pass another specific message to the mocked process
-                          nuntius:passthrough({Self, make_ref(), new_message})
+                          Mocked = nuntius:mocked_process(),
+                          nuntius:passthrough({Self, make_ref(), {new_message, Mocked}})
                        end),
     echo ! new_message,
+    Mocked = nuntius:mocked_process(echo),
     receive
-        {_, new_message} ->
-            error(received) % ... but we don't get it back (outside the process)
+        {_, {new_message, Mocked}} ->
+            % ... and we get it back (from the mocking process - notice Mocked)
+            [#{mocked := true, passed_through := true}, #{mocked := true, passed_through := true}] =
+                nuntius:history(echo)
     after 250 ->
-        % messages were explicitly passed through
-        [#{mocked := true, passed_through := true}, #{mocked := true, passed_through := true}] =
-            nuntius:history(echo),
-        ok
+        error(not_received)
     end.
 
-% @doc We make a real effort to distinguish a function_clause issued internally from a function
-% clause issued by consumer code. This test makes sure that reality is constant.
+% @doc We make an effort to distinguish an exception issued from an expectation from that issued
+% from e.g. a function clause issued by consumer code.
+% This test makes sure that reality is constant.
 -dialyzer([{nowarn_function, run_expects_function_clause/1}]).
 
 run_expects_function_clause(_Config) ->
     % We make sure that a non matching function head will not provoke a test error.
-    ok = nuntius:new(echo),
+    ok = nuntius:new(echo, #{exit_on_nomatch => false}),
     _ = nuntius:expect(echo, fun(match_nothing_else) -> ok end),
     echo ! match_this,
     true = is_process_alive(whereis(echo)), % it lives
@@ -326,9 +329,54 @@ run_expects_function_clause(_Config) ->
     after 250 ->
         ok
     end,
-    undefined = whereis(echo). % it no longer lives
+    true = is_process_alive(whereis(echo)). % it still lives (exception is ignored)
 
     % using e.g. echo ! 2 shows that what killed the process was {lists,sort,[fff].
+
+-dialyzer([{nowarn_function, exit_on_error_inside_expectation/1}]).
+
+exit_on_error_inside_expectation(_Config) ->
+    % We make sure that an error inside an expectation will be visible to the consumer.
+    ok = nuntius:new(plus_oner),
+    _ = nuntius:expect(plus_oner, fun({_Self, _Ref, 1}) -> lists:sort(fff) end),
+
+    % The output will be something like:
+    % exception exit: {nuntius,nomatch,
+    %                     [{lists,sort,[fff],[{file,"lists.erl"},{line,512}]},
+    %                      {nuntius_mocker,'-run_expects/3-fun-1-',3,
+    %                          [{file,
+    %                               "/home/user/nuntius/src/nuntius_mocker.erl"},
+    %                           {line,108}]}
+    % The error is inside the expectation so it's "less" visible.
+    try
+        add_one(1),
+        exit(wont_get_here)
+    catch
+        error:_ -> % You have to remove this to see how the consumer would see it
+            ok
+    end.
+
+exit_on_nomatch(_Config) ->
+    % We make sure that a non matching function head will throw an exception.
+    ok = nuntius:new(plus_oner),
+    _ = nuntius:expect(plus_oner, fun({_Self, _Ref, 14}) -> not_matched end),
+
+    % The output will be something like:
+    % exception exit: {nuntius,nomatch,
+    %                     [{nuntius_api_SUITE,'-exit_on_nomatch/1-fun-0-',
+    %                          [{<0.551.0>,#Ref<0.3533323057.4076863489.191396>,
+    %                            13}],
+    %                          [{file,
+    %                               "/home/user/nuntius/test/nuntius_api_SUITE.erl"},
+    %                           {line,350}]}
+    % The error is in the expectation head so it's visible.
+    try
+        add_one(13),
+        exit(wont_get_here)
+    catch
+        error:_ -> % You have to remove this to see how the consumer would see it
+            ok
+    end.
 
 add_one(ANumber) ->
     call(plus_oner, ANumber).

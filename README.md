@@ -54,6 +54,15 @@ the message,
 * `passed_through`: an indication of whether or not the received message was passed through to
 the mocked process.
 
+## Expectation handling
+
+If, when `nuntius` executes your expectations, none matches the input (which means it's better
+to have a catch-all) it'll exit with `{nuntius, nomatch, StackTrace}`. This can be prevented by
+using option `exit_on_nomatch` as `false` (the default is to exit).
+
+On the other hand, if an exception occurs inside one of your expectations, `nuntius` will
+also exit with `{nuntius, nomatch, StackTrace}` so you can analyze what needs to be fixed.
+
 ## Documentation
 
 Documentation is generated with:

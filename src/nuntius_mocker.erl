@@ -91,48 +91,50 @@ handle_cast({expect, Function, ExpectId}, #{expects := Expects} = State) ->
 handle_cast({delete, ExpectId}, #{expects := Expects} = State) ->
     State#{expects => maps:remove(ExpectId, Expects)}.
 
-handle_message(Message, #{expects := Expects} = State) ->
+handle_message(Message, #{expects := Expects, opts := Opts} = State) ->
     nuntius_proc:current_message(Message),
     nuntius_proc:passed_through(false),
-    ExpectsMatched = run_expects(Message, Expects),
+    ExpectsMatched = run_expects(Message, Expects, Opts),
     _ = maybe_passthrough(Message, ExpectsMatched, State),
     maybe_add_event({Message, ExpectsMatched}, State).
 
-run_expects(Message, Expects) ->
-    maps:fold(fun (_Id, _Expect, {{'$nuntius', match}, _} = Result) ->
-                      Result;
-                  (_Id, Expect, {'$nuntius', nomatch}) ->
-                      try Expect(Message) of
-                          R ->
-                              {{'$nuntius', match}, R}
-                      catch
-                          error:function_clause:Stacktrace ->
-                              StMFA = mfa_from_stacktrace(Stacktrace),
-                              FiMFA = mfa_from_fun_info(Expect),
-                              StMFA =/= FiMFA andalso exit(self(), Stacktrace),
-                              {'$nuntius', nomatch}
-                      end
-              end,
-              {'$nuntius', nomatch},
-              Expects).
+run_expects(Message, Expects0, #{exit_on_nomatch := ExitOnNoMatch}) ->
+    NoMatchFun = fun(_Message) -> {'$nuntius', nomatch} end,
+    Expects = lists:reverse([{'_', NoMatchFun} | maps:to_list(Expects0)]),
+    ExpectsMatched =
+        lists:foldl(fun ({_Id, _Expect}, #{matched := true} = Match) ->
+                            Match;
+                        ({_Id, Expect}, #{matched := false, stack := StackTrace0}) ->
+                            try Expect(Message) of
+                                {'$nuntius', nomatch} ->
+                                    #{matched => false, stack => StackTrace0};
+                                Match ->
+                                    #{matched => true,
+                                      with => Match,
+                                      stack => StackTrace0}
+                            catch
+                                _Class:_Reason:StackTrace ->
+                                    #{matched => false, stack => StackTrace}
+                            end
+                    end,
+                    #{matched => false, stack => undefined},
+                    Expects),
+    Matched = maps:get(matched, ExpectsMatched),
+    With = maps:get(with, ExpectsMatched, undefined),
+    StackTrace = maps:get(stack, ExpectsMatched),
+    case {Matched, With, StackTrace} of
+        {false, undefined, StackTrace} when ExitOnNoMatch ->
+            exit({nuntius, nomatch, StackTrace});
+        _Other ->
+            ExpectsMatched
+    end.
 
-mfa_from_fun_info(Expect) ->
-    {module, M} = erlang:fun_info(Expect, module),
-    {name, F} = erlang:fun_info(Expect, name),
-    {arity, A} = erlang:fun_info(Expect, arity),
-    {M, F, A}.
-
-mfa_from_stacktrace(Stacktrace) ->
-    [{M, F, Args, _} | _] = Stacktrace,
-    A = length(Args),
-    {M, F, A}.
-
-maybe_passthrough(_Message, {{'$nuntius', match}, _}, _Opts) ->
-    {'$nuntius', ignore};
+maybe_passthrough(_Message, #{matched := true}, _Opts) ->
+    ok;
 maybe_passthrough(_Message, _ExpectsMatched, #{opts := #{passthrough := false}}) ->
-    {'$nuntius', ignore};
+    ok;
 maybe_passthrough(Message, _ExpectsMatched, _State) ->
-    nuntius_proc:passthrough(Message).
+    ok = nuntius_proc:passthrough(Message).
 
 maybe_add_event(_Message, #{opts := #{history := false}} = State) ->
     State;
@@ -141,9 +143,10 @@ maybe_add_event({Message, ExpectsMatched}, State) ->
                      fun(History) ->
                         PassedThrough = nuntius_proc:passed_through(),
                         nuntius_proc:passed_through(false),
+                        #{matched := Matched} = ExpectsMatched,
                         [#{timestamp => erlang:system_time(),
                            message => Message,
-                           mocked => ExpectsMatched =/= {'$nuntius', nomatch},
+                           mocked => Matched,
                            passed_through => PassedThrough}
                          | History]
                      end,

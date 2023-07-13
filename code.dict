@@ -1,6 +1,3 @@
 %% Code pieces that appear in comments
 gen_server
 new/2
-named_exp2
-function_clause
-lists,sort,[fff

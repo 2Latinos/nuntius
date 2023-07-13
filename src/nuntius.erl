@@ -17,7 +17,10 @@
 -type expect_id() :: reference() | expect_name().
 -type expect_name() :: atom().
 -type message() :: term().
--type opts() :: #{passthrough => boolean(), history => boolean()}.
+-type opts() ::
+    #{passthrough => boolean(),
+      history => boolean(),
+      exit_on_nomatch => boolean()}.
 -type process_name() :: atom().
 
 -export_type([event/0, expect_fun/0, expect_id/0]).
@@ -57,10 +60,17 @@ new(ProcessName) ->
 %%          the history of messages received.
 %%              <ul><li>default: <code>true</code></li></ul>
 %%          </li>
+%%          <b><code>exit_on_nomatch</code></b>: if <code>true</code>, the mocking process will
+%%          exit with an exception if none of the expectations match the message. Otherwise it'll
+%%          silently ignore it.
+%%              <ul><li>default: <code>true</code></li></ul>
 %%          </ul>
 -spec new(process_name(), opts()) -> ok | {error, not_found}.
 new(ProcessName, Opts) ->
-    DefaultOpts = #{passthrough => true, history => true},
+    DefaultOpts =
+        #{passthrough => true,
+          history => true,
+          exit_on_nomatch => true},
     nuntius_sup:start_mock(ProcessName, maps:merge(DefaultOpts, Opts)).
 
 %% @doc Removes a mocking process.
@@ -114,7 +124,8 @@ reset_history(ProcessName) ->
 
 %% @doc Adds a new expect function to a mocked process.<br />
 %%      When a message is received by the process, this function will be run on it.<br />
-%%      If the message doesn't match any clause, nothing will be done.<br />
+%%      If the message doesn't match any clause, the process might exit,
+%%      depending on option <code>exit_on_nomatch</code>.<br />
 %%      If the process is not mocked, an error is returned.<br />
 %%      When the function is successfully added, a reference is returned as an identifier.
 -spec expect(process_name(), expect_fun()) -> reference() | {error, not_mocked}.
@@ -123,7 +134,8 @@ expect(ProcessName, Function) ->
 
 %% @doc Adds a new <em>named</em> expect function to a mocked process.<br />
 %%      When a message is received by the process, this function will be run on it.<br />
-%%      If the message doesn't match any clause, nothing will be done.<br />
+%%      If the message doesn't match any clause, the process might exit,
+%%      depending on option <code>exit_on_nomatch</code>.<br />
 %%      If the process is not mocked, an error is returned.<br />
 %%      If there was already an expect function with that name, it's replaced.<br />
 %%      When the expect function is successfully added or replaced, it'll keep the name
