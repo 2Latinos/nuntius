@@ -40,7 +40,8 @@ processes, as well as other elements for debugging:
 * `passthrough`: when `true` (default: `true`) all messages received by the mock process are
 passed through to the mocked process,
 * `history`: when `true` (default: `true`) all messages received by the mock process are
-classified as per [Understanding the message history](#understanding-the-message-history).
+classified as per [Understanding the message history](#understanding-the-message-history),
+* `exit_on_nomatch`: (default: `true`) check [Expectation handling](#expectation-handling) below.
 
 ## Understanding the message history
 
