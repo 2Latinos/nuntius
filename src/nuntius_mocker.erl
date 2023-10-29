@@ -117,11 +117,11 @@ run_expects(Message, Expects0, #{exit_on_nomatch := ExitOnNoMatch}) ->
                     end,
                     matched_with_stack(false, undefined, undefined),
                     Expects),
-    Matched = maps:get(matched, ExpectsMatched),
-    With = maps:get(with, ExpectsMatched, undefined),
-    StackTrace = maps:get(stack, ExpectsMatched),
-    case {Matched, With, StackTrace} of
-        {false, undefined, StackTrace} when ExitOnNoMatch ->
+    case ExpectsMatched of
+        #{matched := false,
+          with := undefined,
+          stack := StackTrace}
+            when ExitOnNoMatch ->
             exit({nuntius, nomatch, StackTrace});
         _Other ->
             ExpectsMatched
