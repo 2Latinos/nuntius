@@ -1,3 +1,3 @@
 # Changelog
 
-See the [Releases](../../releases) page.
+See the [Releases](https://github.com/2Latinos/nuntius/releases) page.

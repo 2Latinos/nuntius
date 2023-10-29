@@ -11,7 +11,7 @@
 
 ## License
 
-`nuntius` is licensed under The [MIT](LICENSE) License, for all code.
+`nuntius` is licensed under The [MIT](LICENSE.md) License, for all code.
 
 ## Reporting a bug
 
