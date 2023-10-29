@@ -11,16 +11,16 @@
 
 ## License
 
-`nuntius` is licensed under The [MIT](LICENSE.md) License, for all code.
+nuntius is licensed under The [MIT](LICENSE.md) License, for all code.
 
 ## Reporting a bug
 
-`nuntius` is not perfect software and will be buggy.
+nuntius is not perfect software and will be buggy.
 
 Bugs can be reported via
 [GitHub issues: bug report](https://github.com/2Latinos/nuntius/issues/new?template=bug_report.md).
 
-Some contributors and maintainers may be unpaid developers working on `nuntius`, in their own time,
+Some contributors and maintainers may be unpaid developers working on nuntius, in their own time,
 with limited resources. We ask for respect and understanding, and will provide the same back.
 
 If your contribution is an actual bug fix, we ask you to include tests that, not only show the issue
@@ -40,7 +40,7 @@ If this is done, open up a
 
 We may discuss details with you regarding the implementation, and its inclusion within the project.
 
-We try to have as many of `nuntius`'s features tested as possible. Everything that a user can do,
+We try to have as many of nuntius' features tested as possible. Everything that a user can do,
 and is repeatable in any way, should be tested, to guarantee backwards compatible.
 
 ## Submitting your changes
@@ -63,7 +63,7 @@ as possible. This will also help eventual automated changelog generation.
 
 ### Pull requests and branching
 
-All fixes to `nuntius` end up requiring a +1 from one or more of the project's maintainers.
+All fixes to nuntius end up requiring a +1 from one or more of the project's maintainers.
 
 During the review process, you may be asked to correct or edit a few things before a final rebase
 to merge things. Do send edits as individual commits to allow for gradual and partial reviews to be
@@ -71,5 +71,5 @@ done by reviewers.
 
 ### Credits
 
-`nuntius` has been improved by
+nuntius has been improved by
 [many contributors](https://github.com/2Latinos/nuntius/graphs/contributors)!

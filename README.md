@@ -3,12 +3,12 @@
 [ci]: https://github.com/2Latinos/nuntius/actions/workflows/erlang.yml
 [ci-img]: https://github.com/2Latinos/nuntius/actions/workflows/erlang.yml/badge.svg
 
-`nuntius` is an Erlang/OTP library to mock registered processes. Its main use case is to intercept
+nuntius is an Erlang/OTP library to mock registered processes. Its main use case is to intercept
 messages sent to specific processes and to allow the consumer to act upon them.
 
 ## Usage
 
-`nuntius` is best used via [rebar3](https://rebar3.org/)'s `test` profile and using Erlang/OTP's
+nuntius is best used via [rebar3](https://rebar3.org/)'s `test` profile and using Erlang/OTP's
 [Common Test framework](https://www.erlang.org/doc/man/common_test.html):
 
 1\. change your `rebar.config` to include:
@@ -17,7 +17,7 @@ messages sent to specific processes and to allow the consumer to act upon them.
 {profiles, [{test, [{deps, [nuntius]}]}]}.
 ```
 
-2\. run your `nuntius`-enabled tests with:
+2\. run your nuntius-enabled tests with:
 
 ```shell
 rebar3 ct
@@ -56,11 +56,11 @@ the mocked process.
 
 ## Expectation handling
 
-If, when `nuntius` executes your expectations, none matches the input (which means it's better
+If, when nuntius executes your expectations, none matches the input (which means it's better
 to have a catch-all) it'll exit with `{nuntius, nomatch, StackTrace}`. This can be prevented by
 using option `exit_on_nomatch` as `false` (the default is to exit).
 
-On the other hand, if an exception occurs inside one of your expectations, `nuntius` will
+On the other hand, if an exception occurs inside one of your expectations, nuntius will
 also exit with `{nuntius, nomatch, StackTrace}` so you can analyze what needs to be fixed.
 
 ## Documentation
