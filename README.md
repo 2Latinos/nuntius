@@ -40,17 +40,20 @@ processes, as well as other elements for debugging:
 * `passthrough`: when `true` (default: `true`) all messages received by the mock process are
 passed through to the mocked process,
 * `history`: when `true` (default: `true`) all messages received by the mock process are
-classified as per [Understanding the message history](#understanding-the-message-history).
+classified as per [Understanding the message history](#understanding-the-message-history),
+* `exit_on_nomatch`: (default: `true`) check [Expectation handling](#expectation-handling) below.
 
 ## Understanding the message history
 
-History elements are classified with 4 keys:
+History elements are classified with 6 keys:
 
 * `timestamp`: an integer representing Erlang system time in native time unit,
 * `message`: the message that was received and/or potentially handled by expectations
 (or passed through),
 * `mocked`: an indication of whether or not any of the expecations you declared handled
 the message,
+* `with`: the expectation return value,
+* `stack`: the stack trace, in case of an exception,
 * `passed_through`: an indication of whether or not the received message was passed through to
 the mocked process.
 
