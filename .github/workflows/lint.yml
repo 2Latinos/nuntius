@@ -12,7 +12,7 @@ jobs:
 
       # uses .markdownlint-cli2.yaml for configuration
       - name: markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v5
+        uses: DavidAnson/markdownlint-cli2-action@v13
         with:
           globs: |
             .github/**/*.md
