@@ -50,7 +50,7 @@ History elements are classified with 6 keys:
 * `timestamp`: an integer representing Erlang system time in native time unit,
 * `message`: the message that was received and/or potentially handled by expectations
 (or passed through),
-* `mocked`: an indication of whether or not any of the expecations you declared handled
+* `mocked`: an indication of whether or not any of the expectations you declared handled
 the message,
 * `with`: the expectation return value,
 * `stack`: the stack trace, in case of an exception,
