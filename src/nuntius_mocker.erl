@@ -107,17 +107,15 @@ run_expects(Message, Expects0, #{exit_on_nomatch := ExitOnNoMatch}) ->
                         ({_Id, Expect}, #{matched := false, stack := StackTrace0}) ->
                             try Expect(Message) of
                                 {'$nuntius', nomatch} ->
-                                    #{matched => false, stack => StackTrace0};
+                                    matched_with_stack(false, undefined, StackTrace0);
                                 Match ->
-                                    #{matched => true,
-                                      with => Match,
-                                      stack => StackTrace0}
+                                    matched_with_stack(true, Match, StackTrace0)
                             catch
                                 _Class:_Reason:StackTrace ->
-                                    #{matched => false, stack => StackTrace}
+                                    matched_with_stack(false, undefined, StackTrace)
                             end
                     end,
-                    #{matched => false, stack => undefined},
+                    matched_with_stack(false, undefined, undefined),
                     Expects),
     Matched = maps:get(matched, ExpectsMatched),
     With = maps:get(with, ExpectsMatched, undefined),
@@ -128,6 +126,11 @@ run_expects(Message, Expects0, #{exit_on_nomatch := ExitOnNoMatch}) ->
         _Other ->
             ExpectsMatched
     end.
+
+matched_with_stack(Matched, With, Stack) ->
+    #{matched => Matched,
+      with => With,
+      stack => Stack}.
 
 maybe_passthrough(_Message, #{matched := true}, _Opts) ->
     ok;
@@ -143,10 +146,15 @@ maybe_add_event({Message, ExpectsMatched}, State) ->
                      fun(History) ->
                         PassedThrough = nuntius_proc:passed_through(),
                         nuntius_proc:passed_through(false),
-                        #{matched := Matched} = ExpectsMatched,
+                        #{matched := Matched,
+                          with := With,
+                          stack := Stack} =
+                            ExpectsMatched,
                         [#{timestamp => erlang:system_time(),
                            message => Message,
                            mocked => Matched,
+                           with => With,
+                           stack => Stack,
                            passed_through => PassedThrough}
                          | History]
                      end,

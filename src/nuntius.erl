@@ -12,6 +12,8 @@
     #{timestamp := integer(),
       message := message(),
       mocked := boolean(),
+      with := term(),
+      stack := term(),
       passed_through := boolean()}.
 -type expect_fun() :: fun((_) -> _).
 -type expect_id() :: reference() | expect_name().
