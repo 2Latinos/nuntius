@@ -1,6 +1,6 @@
 # nuntius [![Erlang CI][ci-img]][ci]
 
-[ci]: https://github.com/2Latinos/nuntius
+[ci]: https://github.com/2Latinos/nuntius/actions/workflows/erlang.yml
 [ci-img]: https://github.com/2Latinos/nuntius/actions/workflows/erlang.yml/badge.svg
 
 `nuntius` is an Erlang/OTP library to mock registered processes. Its main use case is to intercept
@@ -68,7 +68,7 @@ also exit with `{nuntius, nomatch, StackTrace}` so you can analyze what needs to
 Documentation is generated with:
 
 ```shell
-rebar3 edoc
+rebar3 ex_doc
 ```
 
 after which you can use your favorite Web browser to open `doc/index.html`.
@@ -99,4 +99,4 @@ accepted and welcome. Check [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
 ## License
 
-Check [LICENSE](LICENSE).
+Check [LICENSE.md](LICENSE.md).
